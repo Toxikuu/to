@@ -23,6 +23,8 @@ pub fn sex(command: &str) -> io::Result<String> {
     let command = prepend_source_base(command);
 
     let output = Command::new("bash")
+        .arg("--noprofile")
+        .arg("--norc")
         .arg("-e")
         .arg("-c")
         .arg(&command)
@@ -48,6 +50,8 @@ pub fn exec(command: &str) -> io::Result<()> {
     let command = prepend_source_base(command);
 
     let mut child = Command::new("bash")
+        .arg("--noprofile")
+        .arg("--norc")
         .arg("-e")
         .arg("-c")
         .arg(command)
@@ -101,6 +105,8 @@ pub fn exec_interactive(command: &str) -> io::Result<()> {
     let command = prepend_source_base(command);
 
     let status = Command::new("bash")
+        .arg("--noprofile")
+        .arg("--norc")
         .arg("-e")
         .arg("-c")
         .arg(command)
