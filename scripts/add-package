@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+
+set -e
+pushd . &>/dev/null
+
+cd /var/cache/to/pkgs
+
+# Common variables
+m="Tox"
+
+check_existence() {
+    if [ -e "/var/cache/to/pkgs/$n/pkg" ]; then
+        echo "Package '$n' already exists" >&2
+        exit 2
+    fi
+}
+
+template() {
+    if [[ "$1" == "https://github.com/"* ]]; then
+
+        echo "Detected GitHub template"
+
+        TMP1="$(mktemp)" # base
+        TMP2="$(mktemp)" # releases
+
+        u="$1"
+
+        shorthand="${u#*https://github.com/}"
+        shorthand="${shorthand%.git}"
+        n="${shorthand#*/}"
+
+        check_existence
+
+        mkdir -pv "$n"
+        cd        "$n"
+
+        curl -s "https://api.github.com/repos/$shorthand" -o "$TMP1"
+        curl -s "https://api.github.com/repos/$shorthand/releases/latest" -o "$TMP2"
+
+        v=$(jq -r '.tag_name'        < "$TMP2")
+        a=$(jq -r '.description'     < "$TMP1")
+        l=$(jq -r '.license.spdx_id' < "$TMP1")
+
+        if [[ "$v" == "$n-"* ]]; then
+            v="${v#*-}"
+        fi
+
+        # Strip leading v, if present
+        v="${v#v}"
+
+        if [[ "$v" == "null" ]]; then
+            v=
+        fi
+
+        sed \
+            -e "s|NAME|$n|"         \
+            -e "s|UPSTREAM|$u|"     \
+            -e "s|VERSION|$v|"      \
+            -e "s|ABOUT|$a|"        \
+            -e "s|LICENSE|$l|"      \
+            -e "s|MAINTAINER|$m|"   \
+        /usr/share/to/template > /var/cache/to/pkgs/"$n"/pkg
+
+        rm -f "$TMP1" "$TMP2"
+
+    elif [[ "$1" == "https://archlinux.org/packages/"*"/"*"/"* ]]; then
+
+        echo "Detected Arch Linux template"
+
+        n="$(echo "$1" | cut -d/ -f7)"
+
+        check_existence
+
+        mkdir -pv "$n"
+        cd        "$n"
+
+        TMP1=$(mktemp)
+        curl -s "https://archlinux.org/packages/search/json/?name=$n" -o "$TMP1"
+
+        v="$(jq -r '.results[0].pkgver'                     < "$TMP1")"
+        u="$(jq -r '.results[0].url'                        < "$TMP1")"
+        a="$(jq -r '.results[0].pkgdesc'                    < "$TMP1")"
+        readarray -t l < <(jq -r '.results[0].licenses // [] | .[]' < "$TMP1")
+
+        echo "Required:" > deps
+        {
+            jq -r '.results[0].depends // [] | .[]' < "$TMP1"
+
+            echo -e "\nOptional:" >> deps
+            jq -r '.results[0].optdepends // [] | .[]' < "$TMP1"
+
+            echo -e "\nBuild:" >> deps
+            jq -r '.results[0].builddepends // [] | .[]' < "$TMP1"
+
+            echo -e "\nTest:" >> deps
+            jq -r '.results[0].checkdepends // [] | .[]' < "$TMP1"
+        } >> deps
+
+        sed \
+            -e "s|NAME|$n|"         \
+            -e "s|UPSTREAM|$u|"     \
+            -e "s|VERSION|$v|"      \
+            -e "s|ABOUT|$a|"        \
+            -e "s|LICENSE|${l[*]}|" \
+            -e "s|MAINTAINER|$m|"   \
+        /usr/share/to/template > /var/cache/to/pkgs/"$n"/pkg
+
+        rm -f "$TMP1"
+
+    elif [[ "$1" == *"@"* ]]; then
+
+        echo "Detected standard template"
+
+        n="${1%@*}"
+        v="${1#*@}"
+
+        check_existence
+
+        mkdir -pv "$n"
+        cd        "$n"
+
+        sed \
+            -e "s|NAME|$n|"         \
+            -e "s|VERSION|$v|"      \
+            -e "s|MAINTAINER|$m|"   \
+        /usr/share/to/template > /var/cache/to/pkgs/"$n"/pkg
+
+    else
+
+        echo "Invalid syntax" >&2
+        exit 1
+
+    fi
+}
+
+finalize() {
+
+    cd "/var/cache/to/pkgs/${n:?}"
+    . ./pkg
+
+    rm -f deps
+
+    # TODO: Write `to lint`
+    if ! ${SKIP_CHECKS:-false}; then
+        # to lint     "$n" || return 2
+        to generate "$n" || return 3
+        to vf       "$n" | sed 's,\x1b\[[0-9;]*m,,g' | grep '^\[-\] ' && return 99
+        to build    "$n" || return 4
+    fi
+
+    git add .
+    COMMIT=$(mktemp)
+    sed \
+        -e "s|<name>|$n|g"      \
+        -e "s|<version>|$v|g"   \
+        -e "s|<about>|$a|g"     \
+    /usr/share/to/git-templates/add-package > "$COMMIT"
+    git commit --template="$COMMIT" --allow-empty-message
+
+    rm -f "$COMMIT"
+
+}
+
+
+if ! ${FINALIZE_ONLY:-false}; then
+    template "$@"
+fi
+
+# trap myself until the package builds :100:
+bash --rcfile /usr/share/to/envs/p.env
+n="${n:-${1%@*}}"
+until finalize; do
+    echo "Failed to finalize ($?) -- retrying..."
+    sleep 0.5
+    bash --rcfile /usr/share/to/envs/p.env
+done
+
+
+popd &>/dev/null

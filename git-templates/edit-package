@@ -1,0 +1,8 @@
+pkg(edit): <name> <version>
+
+<edits>
+
+# Example:
+# pkg(edit): curl 8.13.0
+#
+# Fixed a build failure caused by a critical oversight in my build script lol

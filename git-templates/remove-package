@@ -1,0 +1,8 @@
+pkg(remove): <name> <version>
+
+<rationale>
+
+# Example:
+# pkg(add): curl 8.13.0
+#
+# Unmaintained, and constantly faces new CVEs smh. Just use wget /s.

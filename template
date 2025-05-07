@@ -1,0 +1,26 @@
+#!/to
+
+n="NAME"
+v="VERSION"
+a="ABOUT"
+m="MAINTAINER"
+l="LICENSE"
+t=""
+u="UPSTREAM"
+
+s=(
+)
+
+d=(
+)
+
+b() {
+
+_cfg=(
+)
+
+cfg
+mk
+mi
+
+}

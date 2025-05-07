@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+# defaults
+prefix="/usr"
+sysconfdir="/etc"
+bindir="$prefix/bin"
+docdir="$prefix/share/doc/to"
+enable_docs=1
+enable_comp=1
+enable_conf=1
+enable_git=1
+enable_tools=1
+
+show_help() {
+    echo "Usage: ./configure [OPTIONS]"
+    echo
+    echo "Options:"
+    echo "  --prefix=DIR        Set installation prefix (default: $prefix)"
+    echo "  --bindir=DIR        Set binary directory (default: \$prefix/bin)"
+    echo "  --docdir=DIR        Set documentation directory (default: \$prefix/share/doc/to)"
+    echo "  --sysconfdir=DIR    Set system configuration directory (default: $sysconfdir)"
+    echo
+    echo "  --disable-docs      Disable building and installing documentation"
+    echo "  --disable-comp      Disable installing shell completions"
+    echo "  --disable-conf      Disable installing configuration files"
+    echo "  --disable-git       Disable installing the package repo at \"build\" time"
+    echo "  --disable-tools     Disable building and installing maintainer tools"
+    echo
+    echo "  --help              Show this help message and exit"
+    exit 0
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --prefix=*)      prefix="${1#*=}" ;;
+    --bindir=*)      bindir="${1#*=}" ;;
+    --docdir=*)      docdir="${1#*=}" ;;
+    --disable-docs)  enable_docs=0 ;;
+    --disable-comp)  enable_comp=0 ;;
+    --disable-conf)  enable_conf=0 ;;
+    --disable-git)   enable_git=0 ;;
+    --disable-tools) enable_tools=0 ;;
+    --help)          show_help ;;
+    *) echo "Unknown option: $1" >&2 ;;
+  esac
+  shift
+done
+
+echo "Installation prefix: $prefix"
+echo "Binary directory: $bindir"
+echo "Sysconf directory: $sysconfdir"
+if [ "$enable_docs" -eq 1 ]; then
+    echo "Documentation directory: $docdir"
+else
+    echo "Documentation is disabled"
+fi
+
+cat > config.mk <<EOF
+PREFIX=$prefix
+BINDIR=$bindir
+DOCDIR=$docdir
+SYSCONFDIR=$sysconfdir
+ENABLE_DOCS=$enable_docs
+ENABLE_COMP=$enable_comp
+ENABLE_CONF=$enable_conf
+ENABLE_GIT=$enable_git
+ENABLE_TOOLS=$enable_tools
+EOF
+
+echo "Generated config.mk"
+echo "Now run 'make' to build the project."

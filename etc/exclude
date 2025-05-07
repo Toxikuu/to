@@ -1,0 +1,5 @@
+# Files to exclude from distfile extraction
+
+usr/share/doc
+usr/share/man
+usr/share/licenses

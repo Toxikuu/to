@@ -1,0 +1,8 @@
+pkg(add): <name> <version>
+
+<about>
+
+# Example:
+# pkg(add): curl 8.13.0
+#
+# A command-line tool for transferring data with URLs

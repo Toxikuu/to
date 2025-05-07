@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+set -e
+pushd . &>/dev/null
+
+n="${1%@*}"
+nv="${1#*@}"
+new=${NEW:-$nv}
+
+cd /var/cache/to/pkgs/"$n"
+
+check_existence() {
+    if [ ! -e "pkg" ]; then
+        echo "Package '$n' does not exist" >&2
+        exit 2
+    fi
+}
+
+finalize() {
+
+    . ./pkg
+
+    # TODO: Write `to lint`
+    if ! $SKIP_CHECKS; then
+        # to lint     "$n" || return 2
+        to generate "$n" || return 3
+        to vf       "$n" | sed 's,\x1b\[[0-9;]*m,,g' | grep '^\[-\] ' && return 99
+        to build    "$n" || return 4
+    fi
+
+    git add .
+    COMMIT=$(mktemp)
+    sed \
+        -e "s,<name>,$n,g"          \
+        -e "s,<old-version>,$old,g" \
+        -e "s,<new-version>,$new,g" \
+    /usr/share/to/git-templates/update-package > "$COMMIT"
+    git commit --template="$COMMIT"
+
+    rm -f "$COMMIT"
+
+}
+
+. ./pkg
+old="$v"
+sed "s/$v/$new/g" -i pkg
+
+# trap myself until the package builds :100:
+bash --rcfile /usr/share/to/envs/p.env
+until finalize; do
+    echo "Failed to finalize ($?) -- retrying..."
+    sleep 0.5
+    bash --rcfile /usr/share/to/envs/p.env
+done
+
+
+popd &>/dev/null

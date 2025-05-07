@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+set -e
+pushd . &>/dev/null
+
+from="$1"
+to="$2"
+
+cd /var/cache/to/pkgs
+
+if [ ! -e "$from/pkg" ]; then
+    echo "From package '$from' does not exist" >&2
+    exit 2
+fi
+
+if [ -e "$to/pkg" ]; then
+    echo "To package '$to' exists" >&2
+    exit 2
+fi
+
+ln -sv "$from" "$to"
+echo "Added $to as an alias for $from"
+
+finalize() {
+
+    if [ -z "$(git status -s .)" ]; then
+        echo "No changes made"
+        return 0
+    fi
+
+    git add "$from" "$to"
+    COMMIT=$(mktemp)
+    sed \
+        -e "s,<name>,$from,g"   \
+        -e "s,<alias>,$to,g"    \
+    /usr/share/to/git-templates/alias-package > "$COMMIT"
+    git commit --template="$COMMIT" --allow-empty-message
+
+    rm -f "$COMMIT"
+
+}
+
+# trap myself until the package builds :100:
+# TODO: Consider dropping this until; currently kept for consistency
+bash --rcfile /usr/share/to/envs/p.env
+until finalize; do
+    echo "Failed to finalize ($?) -- retrying..."
+    sleep 0.5
+    bash --rcfile /usr/share/to/envs/p.env
+done
+
+
+popd &>/dev/null

@@ -1,0 +1,194 @@
+#!/bin/bash -eu
+
+# **INFO**
+#
+# SUMMARY
+# There exists a tool for creating distfiles, and a package manager for handling
+# them. This file is only used by the distfile creator. Distfiles are tarballs
+# containing a MANIFEST and a DATA file.
+#
+# GLOBAL VARIABLES
+# $A -> assets  -> /A
+# $S -> sources -> /S
+# $B -> build   -> /B
+# $D -> destdir -> /D/$n@$v
+# $E -> envs    -> /E
+#
+# LOCAL VARIABLES
+# $p -> package
+# $n -> name    (parsed from package)
+# $v -> version (parsed from package)
+# $r -> repo    (parsed from package)
+# $a -> about
+# $m -> maintainer
+# $l -> license
+# $u -> upstream
+# $t -> tags
+# $s -> sources
+# $d -> dependencies
+# $p -> patches
+#
+# LOCAL FUNCTIONS
+# vf()  -> version fetch    || predefined default (can be disabled in options)
+# xt()  -> extract          || predefined default if $s is set
+# dl()  -> download         || predefined default if $s is set
+# b()   -> build            || predefined default if $s is set (guessed by dependencies)
+# t()   -> test             || skipped if unset
+# p()   -> package          || predefined default if $s is set (guessed by dependencies)
+#
+# PROCESS
+#   GENERATE
+#   base.env gets sourced, then this gets sourced
+#   package information is parsed and serialized into a lock json
+#
+#   BUILD
+#   lock json is read
+#   dependencies are installed to the chroot
+#   sources are copied to chroot/S
+#   assets are copied to chroot/A
+#   environment files are copied to chroot/E
+#   this script is copied to chroot/build
+#   the chroot is entered and a runner script already in the chroot is called
+#   the runner executes all the logic it can in chroot and creates the dist tarball
+#
+#   PACKAGE
+#   base.env gets sources, then this gets sourced
+#   the tarball is extracted
+#   
+#
+
+n="name"
+v="0.0.0"
+# metapackages (formerly known as sets) should have names starting with +
+a="some information about this package"
+m="tox"     # maintainer
+l="custom"  # can also be an array
+u="https://github.com/toxikuu/package.git" # upstream
+
+# tags
+t=(
+    "dev"
+    "lib"
+    "utils"
+    "cli"
+    "img"
+)
+# could also be written as t="dev lib utils cli img"
+# both expand to the same vector of tags
+
+# sources
+s=(
+    "g,$u"
+    "https://example.com/myawesomepatch.patch"
+    "p,anotherpackage"
+) # undefined means no sources
+
+# dependencies
+#
+# optional dependencies are purposely not supported
+# if youd like to create an alternate build, make a split package
+d=(
+    "glibc"
+    "tree"
+    "scdoc"    # doc dependencies are required but up to the packager's discretion
+
+    "b,strace" # test dependencies can be marked as build dependencies
+    "b,socat"
+
+    "r,makeca" # runtime
+)
+
+# needed kernel config options
+kcfg=(
+    "overlay_fs"
+)
+
+# version fetch
+vf="grep $n- | vfs | sort -V"
+# FIXME: vf should not be a function
+vf() {
+    # definitions in envs/base.env
+    # gr is defined as `git ls-remote --tags --refs "$u" | sed 's,.*/,,'`
+    # vfs is defined as `grep -Ev 'rc|dev|beta|alpha|pre'`
+
+    # example of custom logic
+    gr grep $n- |
+        vfs     |
+        sort -V # the last line of the output is used
+
+    # -----------
+
+    # if vf() is unset, the default is used:
+    gr | grep -Ev 'rc|dev|beta|alpha|pre' | sort -V
+
+    # if the version looks like a commit sha, the following default is used:
+    git ls-remote $u HEAD # i cant forsee a scenario where you'd want to overwrite this, but you can do so
+}
+
+dl() {
+    # you can specify custom download instructions here
+    # the sources should be saved to /var/cache/to/sources/$n@$v
+    pushd "/var/cache/to/sources/$n@$v"
+        sendme receive blob
+    popd
+}
+
+# custom extraction logic
+xt() {
+
+    xz -d -c archive.cpio.xz | bsdcpio -id
+
+}
+
+# build (run in chroot)
+b() {
+
+    # apply patches
+    pat "$A/custom.patch"
+    pat "$S/tox.patch"
+
+    _cfg=(
+        --prefix=/usr
+        --disable-static
+        --sysconfdir=/etc
+    )
+
+    cfg
+    mk
+    mi
+
+}
+
+# test (run in chroot)
+t() {
+
+    mk check
+
+}
+
+# preinstall
+prei() {
+
+    rm -vf /lib/problematic.so*
+
+}
+
+# postinstall
+posti() {
+
+    depmod -a
+
+}
+
+# preremove
+prer() {
+
+    rm -vf whatever
+
+}
+
+# postremove
+postr() {
+    groupdel package-group
+    userdel  package-user
+}

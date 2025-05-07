@@ -1,0 +1,4 @@
+pkg(alias): <name> <- <alias>
+
+# Example:
+# pkg(alias): ripgrep <- rg
