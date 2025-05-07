@@ -16,10 +16,11 @@ bash scripts, emphasis on the mostly)
 ## Non-Features
 So remember how I said `to` is stupid simple? I explicitly omit basic features,
 such as:
-<!-- TODO: update the below line when `to` is not in its current state -->
+<!-- TODO: update the below bullet point when `to` is not in its current state -->
+<!-- TODO: write documentation on repo maintenance and update the below bullet
+point -->
 - Repositories (there is only one. you must maintain your own, keeping with the
 spirit of LFS and all. you can fork
-<!-- TODO: write documentation on repo maintenance and update the below line -->
 [mine](https://github.com/Toxikuu/to-pkgs.git) as reference. but the
 documentation won't come until much later)
 - Backups (you're responsible for making your own. please make your own backups
@@ -71,10 +72,11 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
     written in 5 minutes while high off sleep deprivation
 - [ ] Write `to lint`
 - [ ] Add QA checks that are done post build
-- [*] Add `--debug` for `to view`, and change the default behavior to give
+- [x] Add `--debug` for `to view`, and change the default behavior to give
       something human readable.
-- [*] Add `to alias`
+- [x] Add `to alias`
     - [ ] Consider supporting aliases in package definition dependencies
         - [ ] imo probably don't; just lint for their use in `to lint`
-    - [*] Drop support for implicit package generation
-- [*] Add message support
+    - [x] Drop support for implicit package generation
+- [x] Add message support
+- [ ] Fork my reqs.sh from LFStage and adapt it for use here
