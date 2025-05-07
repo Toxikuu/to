@@ -178,10 +178,11 @@ pub struct PullArgs {
 
 #[derive(Debug, Parser)]
 pub enum SubCommand {
+    // Server
+    /// Run an HTTP server hosting distfiles
     Serve(ServeArgs),
-    Push(PushArgs),
-    Pull(PullArgs),
 
+    // Maintainer
     /// Generate a package
     Generate(GenerateArgs),
     /// Add a package
@@ -199,16 +200,19 @@ pub enum SubCommand {
     Lint(LintArgs),
     /// Fetch a package's upstream version
     Vf(VfArgs),
+    /// Push a package's distfile to the server
+    Push(PushArgs),
+    /// Pull a package's distfile from the server
+    Pull(PullArgs),
 
+    // User
     /// Install the latest version of a package
     Install(InstallArgs),
     /// Remove a package
     Remove(RemoveArgs),
     /// Prune stale files for a package
     Prune(PruneArgs),
-
-    // TODO: Change view and move the current logic to debug-view
-    /// View a package's serialization
+    /// View a package
     View(ViewArgs),
 }
 
@@ -248,8 +252,6 @@ impl CommandHandler {
         match &self.cmd {
             // Server
             | SubCommand::Serve(args) => self.handle_serve(args).await,
-            | SubCommand::Push(args) => self.handle_push(args).await,
-            | SubCommand::Pull(args) => self.handle_pull(args).await,
 
             // Maintainer
             | SubCommand::Generate(args) => self.handle_generate(args),
@@ -260,6 +262,8 @@ impl CommandHandler {
             | SubCommand::Build(args) => self.handle_build(args),
             | SubCommand::Lint(args) => self.handle_lint(args),
             | SubCommand::Vf(args) => self.handle_vf(args).await,
+            | SubCommand::Push(args) => self.handle_push(args).await,
+            | SubCommand::Pull(args) => self.handle_pull(args).await,
 
             // User
             | SubCommand::Install(args) => self.handle_install(args),
