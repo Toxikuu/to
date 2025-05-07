@@ -18,6 +18,7 @@ use tracing::{
     debug,
     error,
     info,
+    warn,
 };
 
 use crate::{
@@ -146,6 +147,12 @@ pub struct ViewArgs {
 }
 
 #[derive(Debug, Args)]
+pub struct LintArgs {
+    #[arg(value_name = "PACKAGE", num_args=0..)]
+    pub packages: Vec<String>,
+}
+
+#[derive(Debug, Args)]
 pub struct VfArgs {
     #[arg(value_name = "PACKAGE", num_args=0..)]
     pub packages: Vec<String>,
@@ -187,6 +194,9 @@ pub enum SubCommand {
     Alias(AliasArgs),
     /// Build a package
     Build(BuildArgs),
+    /// Lint a package's pkg file
+    /// This should be executed after the package is generated
+    Lint(LintArgs),
     /// Fetch a package's upstream version
     Vf(VfArgs),
 
@@ -248,6 +258,7 @@ impl CommandHandler {
             | SubCommand::Edit(args) => self.handle_edit(args),
             | SubCommand::Bump(args) => self.handle_bump(args).await,
             | SubCommand::Build(args) => self.handle_build(args),
+            | SubCommand::Lint(args) => self.handle_lint(args),
             | SubCommand::Vf(args) => self.handle_vf(args).await,
 
             // User
@@ -393,6 +404,19 @@ impl CommandHandler {
         Ok(())
     }
 
+    fn handle_lint(&self, args: &LintArgs) -> Result<()> {
+        let pkgs = none_to_all!(args);
+
+        for pkg_str in &pkgs {
+            let pkg = form_package_or_continue!(pkg_str);
+            match pkg.lint() {
+                | Ok(_) => info!("Lints passed for {pkg}"),
+                | Err(e) => warn!("Lints failed for {pkg}: {e}"),
+            }
+        }
+        Ok(())
+    }
+
     fn handle_install(&self, args: &InstallArgs) -> Result<()> {
         let pkgs = none_to_all!(args);
 
@@ -461,7 +485,7 @@ impl CommandHandler {
         Ok(())
     }
 
-    // TODO: Refactor this function to make it less gross
+    // TODO: Refactor this function to make it less gross <- WIP
     async fn handle_vf(&self, args: &VfArgs) -> Result<()> {
         let pkgs = none_to_all!(args);
 

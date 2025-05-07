@@ -3,6 +3,7 @@ pub mod dep;
 pub mod generate;
 pub mod helpers;
 pub mod install;
+pub mod lint;
 pub mod message;
 pub mod prune;
 pub mod remove;
