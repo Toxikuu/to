@@ -195,7 +195,10 @@ fn clean_overlay() -> Result<()> {
 
         mkdir -pv lower merged upper work
 
-        umount -lR merged || true # TODO: check whether its mounted before unmounting
+        if mountpoint -q merged; then
+            umount -lR merged
+        fi
+
         rm -rf upper/* work/*
         "#
     )
