@@ -9,7 +9,6 @@
 use std::{
     fmt,
     fs::read_to_string,
-    path::PathBuf,
 };
 
 use anyhow::{

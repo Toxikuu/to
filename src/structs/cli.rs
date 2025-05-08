@@ -6,7 +6,6 @@
 use anyhow::{
     Context,
     Result,
-    bail,
 };
 use clap::{
     Args,
@@ -16,7 +15,6 @@ use futures::future::join_all;
 use once_cell::sync::Lazy;
 use permitit::Permit;
 use tracing::{
-    debug,
     error,
     info,
     warn,
@@ -29,7 +27,6 @@ use crate::{
         Package,
         all_package_names,
         vf::{
-            self,
             display_vf,
         },
     },
