@@ -12,6 +12,7 @@ use clap::{
     Args,
     Parser,
 };
+use futures::future::join_all;
 use once_cell::sync::Lazy;
 use permitit::Permit;
 use tracing::{
@@ -27,9 +28,15 @@ use crate::{
     package::{
         Package,
         all_package_names,
+        vf::{
+            self,
+            display_vf,
+        },
     },
-    server,
-    server::core::ADDR,
+    server::{
+        self,
+        core::ADDR,
+    },
 };
 
 const SCRIPT_DIR: &str = "/usr/share/to/scripts";
@@ -315,8 +322,9 @@ impl CommandHandler {
         let pkgs = none_to_all!(args);
 
         for pkg_str in &pkgs {
+            let name = pkg_str.split_once('@').map(|(n, _)| n).unwrap_or(pkg_str);
             // TODO: Consider making generate return a result
-            Package::generate(pkg_str);
+            Package::generate(name);
         }
         Ok(())
     }
@@ -351,7 +359,7 @@ impl CommandHandler {
                 error!("Failed to edit {pkg_str}");
                 continue;
             };
-            let pkg = form_package_or_continue!(pkg_str);
+            let pkg = form_package_or_continue!(name);
             info!("Edited {pkg}");
         }
         Ok(())
@@ -489,51 +497,27 @@ impl CommandHandler {
         Ok(())
     }
 
-    // TODO: Refactor this function to make it less gross <- WIP
     async fn handle_vf(&self, args: &VfArgs) -> Result<()> {
-        let pkgs = none_to_all!(args);
+        let pkg_strs = none_to_all!(args);
 
-        let tasks = pkgs.iter().map(|pkg_str| {
-            let pkg_str = pkg_str.clone();
-            tokio::spawn(async move {
-                let pkg = Package::from_s_file(&pkg_str)
-                    .inspect_err(|e| error!("Failed to form {pkg_str}: {e}"))?;
+        let mut pkgs = Vec::new();
+        for pkg_str in pkg_strs.iter() {
+            let pkg = form_package_or_continue!(pkg_str);
+            pkgs.push(pkg);
+        }
 
-                let Ok(uv) = pkg.version_fetch().await else {
-                    error!("Failed to fetch upstream version for {pkg}");
-                    bail!("Failed to fetch upstream");
-                };
-
-                let n = pkg.name.clone();
-                let v = pkg.version.clone();
-
-                let Some(uv) = uv else {
-                    debug!("Upstream version fetching is disabled for {pkg}. Skipping...");
-                    bail!("Disabled");
-                };
-
-                Ok((n, v, uv)) as Result<(String, String, String)>
+        let tasks = pkgs
+            .iter()
+            .map(|p| {
+                let p_clone = p.clone();
+                tokio::spawn(async move { p_clone.vf().await })
             })
-        });
+            .collect::<Vec<_>>();
 
-        for res in futures::future::join_all(tasks).await {
+        for res in join_all(tasks).await {
             match res {
-                | Ok(Ok((n, v, uv))) => {
-                    if v == uv && !args.outdated_only {
-                        println!(
-                            "\x1b[37;1m[\x1b[32m*\x1b[37m]\x1b[0m \x1b[32m{n:<32}\x1b[0m {v} ~ {uv}"
-                        );
-                    } else {
-                        println!(
-                            "\x1b[37;1m[\x1b[31m-\x1b[37m]\x1b[0m \x1b[31m{n:<32}\x1b[0m {v} ~ {uv}"
-                        );
-                    }
-                },
-                | Ok(Err(e)) => {
-                    if e.to_string() != "Disabled" {
-                        error!("Failed to fetch version for a package: {e}")
-                    }
-                },
+                | Ok(Ok((n, v, uv, is_current))) => display_vf(&n, &v, &uv, is_current),
+                | Ok(_) => {},
                 | Err(e) => {
                     error!("Task join error: {e}");
                 },
