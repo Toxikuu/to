@@ -58,6 +58,7 @@ impl Package {
 
         Ok(Some(
             estimate?
+                .to_ascii_lowercase()
                 .trim_start_matches(&self.name)
                 .trim_start_matches('-')
                 .trim_start_matches('v')
