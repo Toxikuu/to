@@ -70,13 +70,14 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
     all the packages to your other machines)
     - [ ] Also maybe format things properly and make this look like it wasnt
     written in 5 minutes while high off sleep deprivation
-- [ ] Write `to lint`
+- [x] Write `to lint`
 - [ ] Add QA checks that are done post build
 - [x] Add `--debug` for `to view`, and change the default behavior to give
       something human readable.
 - [x] Add `to alias`
-    - [ ] Consider supporting aliases in package definition dependencies
-        - [ ] imo probably don't; just lint for their use in `to lint`
+    - [ ] Ensure aliases aren't used in pkg files with `to lint`
     - [x] Drop support for implicit package generation
 - [x] Add message support
 - [ ] Fork my reqs.sh from LFStage and adapt it for use here
+- [ ] Add `to sync`
+- [ ] Add `to search`
