@@ -49,7 +49,7 @@ endif
 	install -dm755                                $(DESTDIR)/var/cache/to/pkgs
 
 ifeq ($(ENABLE_GIT),1)
-	@if [ -d "$(DESTDIR)/var/cache/to/pkgs" ]; then \
+	@if [ -d "$(DESTDIR)/var/cache/to/pkgs/.git" ]; then \
 		echo "Package repo exists, skipping clone."; \
 	else \
 		echo "Cloning package repo..."; \
