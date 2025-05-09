@@ -20,12 +20,12 @@ finalize() {
 
     . ./pkg
 
-    # TODO: Write `to lint`
-    if ! $SKIP_CHECKS; then
-        # to lint     "$n" || return 2
-        to generate "$n" || return 3
-        to vf       "$n" | sed 's,\x1b\[[0-9;]*m,,g' | grep '^\[-\] ' && return 99
-        to build    "$n" || return 4
+    to lint      "$n" || return 2
+    to generate  "$n" || return 3
+    to vf        "$n" | sed 's,\x1b\[[0-9;]*m,,g' | grep '^\[-\] ' && return 99
+
+    if ! $SKIP_BUILD; then
+        to build "$n" || return 4
     fi
 
     git add .
@@ -43,7 +43,7 @@ finalize() {
 
 . ./pkg
 old="$v"
-sed "s/$v/$new/g" -i pkg
+sed "s/$old/$new/g" -i pkg
 
 # trap myself until the package builds :100:
 bash --rcfile /usr/share/to/envs/p.env

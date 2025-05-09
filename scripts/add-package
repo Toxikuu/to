@@ -125,7 +125,7 @@ template() {
             -e "s|MAINTAINER|$m|"   \
         /usr/share/to/template > /var/cache/to/pkgs/"$n"/pkg
 
-    else
+    else Released: about 1 hour ago 
 
         echo "Invalid syntax" >&2
         exit 1
@@ -140,12 +140,12 @@ finalize() {
 
     rm -f deps
 
-    # TODO: Write `to lint`
-    if ! ${SKIP_CHECKS:-false}; then
-        # to lint     "$n" || return 2
-        to generate "$n" || return 3
-        to vf       "$n" | sed 's,\x1b\[[0-9;]*m,,g' | grep '^\[-\] ' && return 99
-        to build    "$n" || return 4
+    to lint      "$n" || return 2
+    to generate  "$n" || return 3
+    to vf        "$n" | sed 's,\x1b\[[0-9;]*m,,g' | grep '^\[-\] ' && return 99
+
+    if ! $SKIP_BUILD; then
+        to build "$n" || return 4
     fi
 
     git add .
