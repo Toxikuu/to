@@ -26,9 +26,7 @@ use crate::{
     package::{
         Package,
         all_package_names,
-        vf::{
-            display_vf,
-        },
+        vf::display_vf,
     },
     server::{
         self,
@@ -180,6 +178,9 @@ pub struct PullArgs {
     pub packages: Vec<String>,
 }
 
+#[derive(Debug, Args)]
+pub struct SyncArgs {}
+
 #[derive(Debug, Parser)]
 pub enum SubCommand {
     // Server
@@ -208,6 +209,8 @@ pub enum SubCommand {
     Push(PushArgs),
     /// Pull a package's distfile from the server
     Pull(PullArgs),
+    /// Sync the local package repo with its upstream
+    Sync(SyncArgs),
 
     // User
     /// Install the latest version of a package
@@ -268,6 +271,7 @@ impl CommandHandler {
             | SubCommand::Vf(args) => self.handle_vf(args).await,
             | SubCommand::Push(args) => self.handle_push(args).await,
             | SubCommand::Pull(args) => self.handle_pull(args).await,
+            | SubCommand::Sync(args) => self.handle_sync(args),
 
             // User
             | SubCommand::Install(args) => self.handle_install(args),
@@ -302,17 +306,41 @@ impl CommandHandler {
         for pkg_str in &pkgs {
             let pkg = form_package_or_continue!(pkg_str);
             let dist = pkg.distfile();
+            let distfiledir = dist.parent().unwrap().display();
             let distfile = dist.display();
             let filename = dist.file_name().unwrap().display();
             // This curl is silent, fails, shows errors, follows redirects, resumes, retries, and writes to a partfile
             // TODO: Rewrite this natively (reference the pardl proof-of-concept)
             if exec!(
-                "curl -fsSL -C - --retry 3 -o '{distfile}'.part '{ADDR}/{filename}' && mv -vf '{distfile}'.part '{distfile}'"
+                "mkdir -pv {distfiledir} && curl -fsSL -C - --retry 3 -o '{distfile}'.part '{ADDR}/{filename}' && mv -vf '{distfile}'.part '{distfile}'"
             ).is_err() {
                 error!("Failed to pull {distfile} for {pkg} with curl")
             }
         }
         Ok(())
+    }
+
+    // TODO: Remove this allow when SyncArgs is actually used
+    #[allow(unused_variables)]
+    fn handle_sync(&self, args: &SyncArgs) -> Result<()> {
+        // TODO: Make this configurable
+        const TO_PKG_UPSTREAM: &str = "https://github.com/Toxikuu/to-pkgs.git";
+        exec!(
+            r#"
+        if ! command -v git &>/dev/null; then
+            die "git is not installed"
+        fi
+
+        cd /var/cache/to/pkgs
+
+        if ! [ -d .git ]; then
+            git clone ${TO_PKG_UPSTREAM} .
+        fi
+
+        git pull
+        "#
+        )
+        .context("Failed to sync repo")
     }
 
     fn handle_generate(&self, args: &GenerateArgs) -> Result<()> {
