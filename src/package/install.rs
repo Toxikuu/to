@@ -9,6 +9,7 @@ use anyhow::{
 };
 use permitit::Permit;
 use tracing::{
+    debug,
     error,
     info,
     instrument,
@@ -42,7 +43,7 @@ impl Package {
         // Issue a warning that the latest version of a package is already installed if the package
         // is up-to-date, installed, and --force is not passed.
         if !updating && self.is_installed() && !force {
-            warn!("Already installed {self}");
+            debug!("Already installed {self}");
             bail!("Already installed")
         }
 
@@ -98,12 +99,14 @@ impl Package {
             // TODO: Consider adding update hooks (but wait until needed)
             if let Err(e) = self.remove_dead_files_after_update() {
                 warn!("Failed to remove dead files for {self}: {e}")
+            } else {
+                info!(
+                    "Removed dead files for {}@{}",
+                    self.name,
+                    installed_version.unwrap()
+                )
             }
-            info!(
-                "Removed dead files for {}@{}",
-                self.name,
-                installed_version.unwrap()
-            );
+
             self.message(MessageHook::Update);
         } else {
             self.message(MessageHook::Install);
