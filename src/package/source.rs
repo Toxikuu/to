@@ -2,7 +2,10 @@
 
 use std::{
     fmt,
-    path::PathBuf,
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 use anyhow::{
@@ -81,6 +84,14 @@ impl Source {
                 | "p" => SourceKind::Pkg,
                 | _ => panic!("Unknown source kind '{kind}'"),
             };
+
+            if matches!(kind, SourceKind::Pkg) {
+                return Self {
+                    kind,
+                    url: dl.to_string(),
+                    dest: dl.to_string(),
+                }
+            }
 
             if let Some((url, dest)) = dl.split_once(" -> ") {
                 Self {
@@ -183,8 +194,19 @@ impl Package {
                         format!("Failed to fetch sources for source package '{name}'")
                     })?;
 
-                    if !path.exists() {
-                        exec!("cp -af '/var/cache/to/sources/{name}' '{path_str}'")?;
+                    // Copy only the latest sources for the source package
+                    for source in &package.sources {
+                        let origin = source.path(&package);
+                        let dest =
+                            path.join(origin.file_name().context("Source has no file name")?);
+
+                        // If the destination doesn't exist, or its modtime is older than the
+                        // origin, copy
+                        if !dest.exists()
+                            || origin.metadata()?.modified()? > dest.metadata()?.modified()?
+                        {
+                            exec!("cp -af '{}' '{}'", origin.display(), dest.display())?;
+                        }
                     }
                 },
 
