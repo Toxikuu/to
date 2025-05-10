@@ -117,11 +117,12 @@ fn read_all_manifests(manifests: &[PathBuf]) -> Result<HashMap<PathBuf, Vec<Stri
 /// # Find lines representing package install paths unique to this manifest
 /// Backend for `find_unique_paths()`
 /// Returns the unique lines in reverse order (meaning /path/to/file is above /path/to)
-#[instrument]
+#[instrument(skip(all_data))]
 fn find_unique(
     all_data: &HashMap<PathBuf, Vec<String>>,
     this_manifest: &PathBuf,
 ) -> Result<Vec<String>> {
+    debug!("Finding unique files for {this_manifest:?}");
     let this_data = all_data.get(this_manifest).context("Missing manifest")?;
     let all_other_lines = all_data
         .iter()
@@ -132,12 +133,13 @@ fn find_unique(
     Ok(this_data
         .iter()
         .filter(|l| !all_other_lines.contains(l))
-        .cloned()
+        .map(|p| format!("/{p}"))
         .rev()
         .collect())
 }
 
 /// # Finds paths unique to a manifest
+/// Also prefixes those paths with /
 pub fn find_unique_paths(manifest: &PathBuf) -> Result<Vec<String>> {
     let manifests = locate("/var/cache/to/data");
     let data = read_all_manifests(&manifests)?;
@@ -178,15 +180,16 @@ impl Package {
             bail!("Unexpected")
         };
 
+        debug!("Removing paths unique to {self}: {unique:#?}");
         unique.iter().for_each(|p| {
-            let path = Path::new(p);
+            let path = Path::new("/").join(p);
 
             if KEPT.iter().any(|&s| path.ends_with(s)) {
                 debug!("Retaining protected path: '{}'", path.display());
                 return;
             }
 
-            if let Err(e) = rm(path) {
+            if let Err(e) = rm(&path) {
                 warn!("Failed to remove path '{}': {e}", path.display());
             }
 
@@ -242,6 +245,7 @@ pub fn find_dead_files(package: &Package) -> Result<Vec<String>> {
         bail!("Not installed");
     }
 
+    // Read all manifests for the current package
     let manifests = locate(package.datadir());
     let data = read_all_manifests(&manifests)?;
 
