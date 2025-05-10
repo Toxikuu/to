@@ -103,9 +103,34 @@ template() {
             -e "s|ABOUT|$a|"        \
             -e "s|LICENSE|${l[*]}|" \
             -e "s|MAINTAINER|$m|"   \
-        /usr/share/to/template > /var/cache/to/pkgs/"$n"/pkg
+        /usr/share/to/template > "/var/cache/to/pkgs/$n/pkg"
 
         rm -f "$TMP1"
+    elif [[ "$1" == "2"*"/"* ]]; then
+
+        echo "Detected 2 template"
+
+        n="${1#*/}"
+        check_existence
+
+        mkdir -pv "$n"
+        cd        "$n"
+
+        repo="${1%/*}"
+        repo="${repo/2/}"
+
+        sed \
+            -e "s|NAME|n|g" \
+            -e "s|VERS|v|g" \
+            -e "s|DESC|a|g" \
+            -e "s|UPST|u|g" \
+            -e "s|CATG|t|g" \
+            -e "s|DEPS|d|g" \
+            -e "/EXTRA=/d"  \
+            -e "s|2b|b|g"   \
+            -e "s|SOURCE|s|g"   \
+            -e "s|VCMD|vf|g"    \
+        "/var/ports/$repo/$n/BUILD" > "/var/cache/to/pkgs/$n/pkg"
 
     elif [[ "$1" == *"@"* ]]; then
 
@@ -125,7 +150,7 @@ template() {
             -e "s|MAINTAINER|$m|"   \
         /usr/share/to/template > /var/cache/to/pkgs/"$n"/pkg
 
-    else Released: about 1 hour ago 
+    else
 
         echo "Invalid syntax" >&2
         exit 1
