@@ -213,7 +213,7 @@ impl Package {
                 | _ => {
                     if !path.exists() {
                         exec!(
-                            "curl -fL -C - --retry 3 -o '{path_str}'.part '{url}' && mv -vf '{path_str}'.part '{path_str}'"
+                            "curl -fSL -# -C - --retry 3 -o '{path_str}'.part '{url}' && mv -vf '{path_str}'.part '{path_str}'"
                         )?;
                     }
                 },
