@@ -77,6 +77,7 @@ fn log() {
         .with_env_filter(filter)
         .with_level(true)
         .with_target(true)
+        .with_line_number(true)
         .with_timer(time::uptime())
         .with_writer(file_writer.with_max_level(Level::DEBUG).and(io::stdout))
         .compact()
