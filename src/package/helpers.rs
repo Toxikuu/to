@@ -50,6 +50,7 @@ impl Package {
     pub fn is_installed(&self) -> bool { self.datadir().join("IV").exists() }
 
     /// # Checks if a package is up to date, or current
+    /// Returns false if the package is not installed
     pub fn is_current(&self) -> bool {
         let Some(iv) = self.installed_version() else {
             return false;
