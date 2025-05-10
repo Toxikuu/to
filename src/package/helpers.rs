@@ -28,14 +28,13 @@ impl Package {
     pub fn distfile(&self) -> PathBuf { self.distdir().join(format!("{self}.tar.zst")) }
 
     // PERF: Strong memoization candidate
-    pub fn pkgfile(&self) -> PathBuf {
-        PathBuf::from("/var/cache/to/pkgs")
-            .join(&self.name)
-            .join("pkg")
-    }
+    pub fn pkgdir(&self) -> PathBuf { PathBuf::from("/var/cache/to/pkgs").join(&self.name) }
 
     // PERF: Strong memoization candidate
-    pub fn sfile(&self) -> PathBuf { self.pkgfile().with_file_name("s") }
+    pub fn pkgfile(&self) -> PathBuf { self.pkgdir().join("pkg") }
+
+    // PERF: Strong memoization candidate
+    pub fn sfile(&self) -> PathBuf { self.pkgdir().join("s") }
 
     // PERF: Strong memoization candidate
     pub fn distdir(&self) -> PathBuf { PathBuf::from("/var/cache/to/dist").join(&self.name) }
