@@ -19,7 +19,10 @@ impl Package {
             if self.is_current() {
                 println!("  \x1b[32;1m{name}@{version}\x1b[0m");
             } else {
-                println!("  \x1b[31;1m{name}@{version}\x1b[0m");
+                let iv = self
+                    .installed_version()
+                    .expect("[UNREACHABLE] Package is installed but iv not found");
+                println!("  \x1b[31;1m{name}@{iv} -> {version}\x1b[0m");
             }
         } else {
             println!("  \x1b[30;1m{name}@{version}\x1b[0m");
@@ -87,6 +90,9 @@ impl Package {
         println!("{self:#?}");
 
         let deps = &self.resolve_deps();
-        println!("\nDeep dependencies: {deps:#?}");
+        println!("\nDeep dependencies:");
+        for dep in deps {
+            println!(" - {dep}");
+        }
     }
 }
