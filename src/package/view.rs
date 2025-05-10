@@ -1,5 +1,7 @@
 // package/view.rs
 
+use tracing::error;
+
 use super::Package;
 
 impl Package {
@@ -84,6 +86,36 @@ impl Package {
         println!(" \x1b[3m{sources}\x1b[0m");
         println!("󰏗 \x1b[3m{}\x1b[0m", distfile.display());
         println!(" \x1b[3m{}\x1b[0m", pkgfile.display());
+    }
+
+    pub fn view_dependencies(&self) {
+        let deps = &self.dependencies;
+        if deps.is_empty() {
+            println!("No dependencies for {self}");
+            return;
+        }
+
+        println!("󰪴 \x1b[1mDependencies:\x1b[0m");
+        for dep in deps {
+            if let Ok(d) = dep.to_package() {
+                d.view(0);
+            } else {
+                error!("Failed to form package from dependency: {dep}")
+            }
+        }
+    }
+
+    pub fn view_deep_dependencies(&self) {
+        let deps = &self.resolve_deps();
+        if deps.is_empty() {
+            println!("No dependencies for {self}");
+            return;
+        }
+
+        println!("󰪴 \x1b[1mDeep dependencies:\x1b[0m");
+        for dep in deps {
+            dep.view(0)
+        }
     }
 
     pub fn debug_view(&self) {

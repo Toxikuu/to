@@ -139,12 +139,24 @@ pub struct ViewArgs {
     pub messages: bool,
 
     /// Detail, from 0 to 4
-    #[arg(long, short, value_name = "LEVEL", num_args = 1, default_value_t = 0)]
+    #[arg(
+        long,
+        short = 'l',
+        value_name = "LEVEL",
+        num_args = 1,
+        default_value_t = 0
+    )]
     pub detail: u8,
+
+    #[arg(long, short = 'd')]
+    pub dependencies: bool,
+
+    #[arg(long, short = 'D')]
+    pub deep_dependencies: bool,
 
     /// View all details of a package for debugging
     // TODO: feature(tools)
-    #[arg(long, short)]
+    #[arg(long)]
     pub debug: bool,
 }
 
@@ -505,6 +517,16 @@ impl CommandHandler {
 
             if args.messages {
                 pkg.view_all_messages(pkgslen > 1);
+                continue;
+            }
+
+            if args.dependencies {
+                pkg.view_dependencies();
+                continue;
+            }
+
+            if args.deep_dependencies {
+                pkg.view_deep_dependencies();
                 continue;
             }
 
