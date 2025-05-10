@@ -31,7 +31,8 @@ use crate::{
     exec,
 };
 
-const STAGE3: &str = "/var/tmp/lfstage/stages/lfstage3@2025-04-24_14-18-39.tar.xz";
+// TODO: Make stagefile configurable
+const STAGEFILE: &str = "/var/tmp/lfstage/stages/lfstage3@2025-04-24_14-18-39.tar.xz";
 const MERGED: &str = "/var/cache/to/chroot/merged";
 
 impl Package {
@@ -50,21 +51,26 @@ impl Package {
     fn populate_overlay(&self) -> Result<()> {
         let name = &self.name;
         info!("Populating overlay for {name}");
+        // TODO: Copy files from /usr/share/to/copied to $CHROOT/
+        // Use sane defaults in copied/
         exec!(
             r#"
-            cd /var/cache/to/chroot/merged
+            cd {MERGED}
             mkdir -pv B D S etc/to
 
-            cp -vf /var/cache/to/pkgs/{name}/pkg    pkg     # copy pkg file
+            cp -vf {}                               pkg     # copy pkg file
             cp -vf /usr/share/to/scripts/runner.sh  runner  # copy runner
 
-            if [ -d /var/cache/to/pkgs/{name}/A ]; then cp -af /var/cache/to/pkgs/{name}/A A; fi
+            if [ -d {}/A ]; then cp -af {}/A A; fi
 
             cp -vf /etc/resolv.conf                 etc/resolf.conf
-            cp -vf /etc/to/config.toml              etc/to/config.toml
+            if [ -f /etc/to/config.toml ]; then cp -vf /etc/to/config.toml etc/to/config.toml; fi
             echo 'usr/share/doc'                >   etc/to/exclude
             echo 'usr/share/licenses'           >>  etc/to/exclude
-        "#
+        "#,
+            self.pkgfile().display(),
+            self.pkgdir().display(),
+            self.pkgdir().display(),
         )
         .context("Failed to populate overlay")?;
 
@@ -139,14 +145,14 @@ impl Package {
         info!("Entering chroot for {self}");
         exec!(
             r#"
-        chroot /var/cache/to/chroot/merged  \
-            /usr/bin/env -i                 \
-                HOME=/root                  \
-                TERM=xterm-256color         \
-                PATH=/usr/bin:/usr/sbin     \
-                MAKEFLAGS=-j$(nproc)        \
-                TO_STRIP={strip}            \
-                TO_TEST={tests}             \
+        chroot {MERGED} \
+            /usr/bin/env -i             \
+                HOME=/root              \
+                TERM=xterm-256color     \
+                PATH=/usr/bin:/usr/sbin \
+                MAKEFLAGS=-j$(nproc)    \
+                TO_STRIP={strip}        \
+                TO_TEST={tests}         \
             /runner
         "#
         )
@@ -171,7 +177,7 @@ fn setup_overlay() -> Result<()> {
 
         # extract the stage3 if it's absent
         if [ ! -d lower/usr ]; then 
-            tar xpf {STAGE3} -C lower
+            tar xpf {STAGEFILE} -C lower
         fi
 
         mount -vt overlay overlay -o lowerdir=lower,upperdir=upper,workdir=work merged
@@ -180,8 +186,6 @@ fn setup_overlay() -> Result<()> {
         mount -vt proc proc merged/proc
         mount -vt sysfs sysfs merged/sys
         mount -vt tmpfs tmpfs merged/run
-
-        cp -vf /etc/resolv.conf merged/etc/
         "#
     )
     .context("Failed to set up overlay")
