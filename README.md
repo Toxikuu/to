@@ -64,12 +64,12 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 - [ ] Add zstd to LFStage
 - [ ] Use the pardl poc instead of curl for pull
 - [ ] Improve `to view`
-    - [ ] Add `--dependencies` and `--deep-dependencies`
-    - [ ] Add `--distfiles` to show available distfiles
+    - [x] Add `--dependencies` and `--deep-dependencies`
+    - [ ] Add `--distfiles` to show available distfiles for a package
     - [ ] Add `--outdated` to show only outdated packages
     - [ ] Add `--installed` to show only installed (and outdated) packages
     - [ ] Add `--available` to show only available packages
-    - [ ] Adjust the format for outdated packages to be 'name@iv -> v'
+    - [x] Adjust the format for outdated packages to be 'name@iv -> v'
 - [ ] Write an explanation of how `to` works
     - [ ] Also write documentation (eventually)
 - [ ] Fucking finish this readme
@@ -80,13 +80,16 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
     - [ ] Also maybe format things properly and make this look like it wasnt
     written in 5 minutes while high off sleep deprivation
 - [x] Write `to lint`
+    - [ ] Add a lint "IlOpportunity" for missed il usage, similar to def's lint
 - [ ] Add QA checks that are done post build
 - [x] Add `--debug` for `to view`, and change the default behavior to give
       something human readable.
 - [x] Add `to alias`
-    - [ ] Ensure aliases aren't used in pkg files with `to lint`
+    - [x] Ensure aliases aren't used in pkg files with `to lint`
+        - [ ] Revert this. Aliases appear to be fine actually lol.
     - [x] Drop support for implicit package generation
 - [x] Add message support
 - [ ] Fork my reqs.sh from LFStage and adapt it for use here
 - [x] Add `to sync`
 - [ ] Add `to search`
+- [ ] Add `to --version`
