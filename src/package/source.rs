@@ -2,10 +2,7 @@
 
 use std::{
     fmt,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::PathBuf,
 };
 
 use anyhow::{
