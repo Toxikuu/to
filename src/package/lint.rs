@@ -33,6 +33,7 @@ pub enum Lint {
     DefaultValues,
     DefOpportunity,
     NoCheckout,
+    AliasInDependencies,
 }
 
 impl fmt::Display for Lint {
@@ -41,6 +42,7 @@ impl fmt::Display for Lint {
             | Lint::DefaultValues => "Default Values",
             | Lint::DefOpportunity => "Def Opportunity",
             | Lint::NoCheckout => "No Checkout",
+            | Lint::AliasInDependencies => "Alias in Dependencies",
         };
         write!(f, "{s}")
     }
@@ -66,6 +68,10 @@ impl Package {
 
         if lints::no_checkout(self, &lines_vec) {
             bail!(Lint::NoCheckout)
+        }
+
+        if lints::alias_in_dependencies(self) {
+            bail!(Lint::AliasInDependencies)
         }
 
         Ok(())
@@ -130,5 +136,16 @@ mod lints {
         } else {
             false
         }
+    }
+
+    /// # Checks whether a package has an alias in its dependencies
+    /// Checks if the pkdir is a symlink
+    pub fn alias_in_dependencies(package: &Package) -> bool {
+        package.dependencies.iter().any(|d| {
+            d.to_package()
+                .expect("Failed to form dependency")
+                .pkgdir()
+                .is_symlink()
+        })
     }
 }
