@@ -19,6 +19,8 @@ use tracing::{
     trace,
 };
 
+use crate::structs::config::CONFIG;
+
 pub fn sex(command: &str) -> io::Result<String> {
     let command = prepend_source_base(command);
 
@@ -126,7 +128,10 @@ pub fn exec_interactive(command: &str) -> io::Result<()> {
 }
 
 fn prepend_source_base(command: &str) -> String {
-    format!("source /usr/share/to/envs/base.env ; {command}")
+    format!(
+        "TO_CFLAGS={} TO_JOBS={} source /usr/share/to/envs/base.env ; {command}",
+        CONFIG.cflags, CONFIG.jobs
+    )
 }
 
 #[macro_export]
