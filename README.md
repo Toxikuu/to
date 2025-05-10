@@ -61,6 +61,15 @@ WORKING ON IT. SOON I PROMISE.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
+- [ ] Add zstd to LFStage
+- [ ] Use the pardl poc instead of curl for pull
+- [ ] Improve `to view`
+    - [ ] Add `--dependencies` and `--deep-dependencies`
+    - [ ] Add `--distfiles` to show available distfiles
+    - [ ] Add `--outdated` to show only outdated packages
+    - [ ] Add `--installed` to show only installed (and outdated) packages
+    - [ ] Add `--available` to show only available packages
+    - [ ] Adjust the format for outdated packages to be 'name@iv -> v'
 - [ ] Write an explanation of how `to` works
     - [ ] Also write documentation (eventually)
 - [ ] Fucking finish this readme
@@ -79,5 +88,5 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
     - [x] Drop support for implicit package generation
 - [x] Add message support
 - [ ] Fork my reqs.sh from LFStage and adapt it for use here
-- [ ] Add `to sync`
+- [x] Add `to sync`
 - [ ] Add `to search`
