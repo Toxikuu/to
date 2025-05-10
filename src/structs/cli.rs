@@ -58,7 +58,7 @@ pub struct AddArgs {
     pub finalize_only: bool,
 
     #[arg(long, short)]
-    pub skip_checks: bool,
+    pub skip_build: bool,
 }
 
 #[derive(Debug, Args)]
@@ -68,7 +68,7 @@ pub struct EditArgs {
     pub packages: Vec<String>,
 
     #[arg(long, short)]
-    pub skip_checks: bool,
+    pub skip_build: bool,
 }
 
 #[derive(Debug, Args)]
@@ -79,7 +79,7 @@ pub struct BumpArgs {
 
     /// Don't perform any checks before committing
     #[arg(long, short)]
-    pub skip_checks: bool,
+    pub skip_build: bool,
 }
 
 #[derive(Debug, Args)]
@@ -357,9 +357,9 @@ impl CommandHandler {
     fn handle_add(&self, args: &AddArgs) -> Result<()> {
         for template in &args.templates {
             if exec_interactive!(
-                "FINALIZE_ONLY={} SKIP_CHECKS={} {SCRIPT_DIR}/add-package {template}",
+                "FINALIZE_ONLY={} SKIP_BUILD={} {SCRIPT_DIR}/add-package {template}",
                 args.finalize_only,
-                args.skip_checks,
+                args.skip_build,
             )
             .is_err()
             {
@@ -376,8 +376,8 @@ impl CommandHandler {
         for pkg_str in &args.packages {
             let name = pkg_str.split_once('@').map(|(n, _)| n).unwrap_or(pkg_str);
             if exec_interactive!(
-                "SKIP_CHECKS={} {SCRIPT_DIR}/edit-package {name}",
-                args.skip_checks,
+                "SKIP_BUILD={} {SCRIPT_DIR}/edit-package {name}",
+                args.skip_build,
             )
             .is_err()
             {
@@ -409,8 +409,8 @@ impl CommandHandler {
             };
 
             exec_interactive!(
-                "SKIP_CHECKS={} CURR={curr} NEW={new} {SCRIPT_DIR}/bump-package {name}",
-                args.skip_checks,
+                "SKIP_BUILD={} CURR={curr} NEW={new} {SCRIPT_DIR}/bump-package {name}",
+                args.skip_build,
             )?;
 
             info!("Bumped {name}@{curr} to {new}");
