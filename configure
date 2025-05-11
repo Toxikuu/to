@@ -12,21 +12,23 @@ enable_git=1
 enable_tools=1
 
 show_help() {
-    echo "Usage: ./configure [OPTIONS]"
-    echo
-    echo "Options:"
-    echo "  --prefix=DIR        Set installation prefix (default: $prefix)"
-    echo "  --bindir=DIR        Set binary directory (default: \$prefix/bin)"
-    echo "  --docdir=DIR        Set documentation directory (default: \$prefix/share/doc/to)"
-    echo "  --sysconfdir=DIR    Set system configuration directory (default: $sysconfdir)"
-    echo
-    echo "  --disable-docs      Disable building and installing documentation"
-    echo "  --disable-comp      Disable installing shell completions"
-    echo "  --disable-conf      Disable installing configuration files"
-    echo "  --disable-git       Disable installing the package repo at \"build\" time"
-    echo "  --disable-tools     Disable building and installing maintainer tools"
-    echo
-    echo "  --help              Show this help message and exit"
+    cat <<EOF
+Usage: ./configure [OPTIONS]
+
+Options:
+    --prefix=DIR        Set installation prefix (default: $prefix)
+    --bindir=DIR        Set binary directory (default: \$prefix/bin)
+    --docdir=DIR        Set documentation directory (default: \$prefix/share/doc/to)
+    --sysconfdir=DIR    Set system configuration directory (default: $sysconfdir)
+
+    --disable-docs      Disable building and installing documentation
+    --disable-comp      Disable installing shell completions
+    --disable-conf      Disable installing configuration files
+    --disable-git       Disable installing the package repo at "build" time
+    --disable-tools     Disable building and installing maintainer tools
+
+    --help              Show this help message and exit
+EOF
     exit 0
 }
 
@@ -46,9 +48,12 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-echo "Installation prefix: $prefix"
-echo "Binary directory: $bindir"
-echo "Sysconf directory: $sysconfdir"
+cat <<EOF
+Installation prefix: $prefix
+Binary directory:    $bindir
+Sysconf directory:   $sysconfdir
+EOF
+
 if [ "$enable_docs" -eq 1 ]; then
     echo "Documentation directory: $docdir"
 else
@@ -67,5 +72,7 @@ ENABLE_GIT=$enable_git
 ENABLE_TOOLS=$enable_tools
 EOF
 
-echo "Generated config.mk"
-echo "Now run 'make' to build the project."
+cat <<EOF
+Generated config.mk
+Now run 'make' to build the project.
+EOF
