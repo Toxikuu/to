@@ -32,6 +32,7 @@ pub enum LintError {
 pub enum Lint {
     DefaultValues,
     DefOpportunity,
+    IlOpportunity,
     NoCheckout,
     AliasInDependencies,
 }
@@ -41,6 +42,7 @@ impl fmt::Display for Lint {
         let s = match self {
             | Lint::DefaultValues => "Default Values",
             | Lint::DefOpportunity => "Def Opportunity",
+            | Lint::IlOpportunity => "Il Opportunity",
             | Lint::NoCheckout => "No Checkout",
             | Lint::AliasInDependencies => "Alias in Dependencies",
         };
@@ -66,6 +68,9 @@ impl Package {
             bail!(Lint::DefOpportunity)
         }
 
+        if lints::il_opportunity(&lines_vec) {
+            bail!(Lint::IlOpportunity)
+        }
         if lints::no_checkout(self, &lines_vec) {
             bail!(Lint::NoCheckout)
         }
@@ -120,6 +125,14 @@ mod lints {
 
         defs.iter()
             .any(|def| lines_vec.windows(def.len()).any(|w| w == def))
+    }
+
+    /// # Checks whether il could have been used
+    /// This lint checks whether a line contains 'install' and the licenses path
+    pub fn il_opportunity(lines_vec: &[&str]) -> bool {
+        lines_vec
+            .iter()
+            .any(|l| l.contains("install -") && l.contains("/usr/share/licenses"))
     }
 
     /// # Checks whether git checkout was omitted
