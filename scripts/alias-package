@@ -3,8 +3,8 @@
 set -e
 pushd . &>/dev/null
 
-from="$1"
-to="$2"
+from="${1,,}"
+to="${2,,}"
 
 cd /var/cache/to/pkgs
 

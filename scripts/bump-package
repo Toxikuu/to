@@ -4,6 +4,7 @@ set -e
 pushd . &>/dev/null
 
 n="${1%@*}"
+n="${n,,}"
 nv="${1#*@}"
 new=${NEW:-$nv}
 

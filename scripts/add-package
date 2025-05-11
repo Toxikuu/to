@@ -28,6 +28,7 @@ template() {
         shorthand="${u#*https://github.com/}"
         shorthand="${shorthand%.git}"
         n="${shorthand#*/}"
+        n="${n,,}"
 
         check_existence
 
@@ -137,6 +138,7 @@ template() {
         echo "Detected standard template"
 
         n="${1%@*}"
+        n="${n,,}"
         v="${1#*@}"
 
         check_existence
