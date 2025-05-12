@@ -24,6 +24,7 @@ use tracing::{
     error,
     level_filters::LevelFilter,
     trace,
+    warn,
 };
 use tracing_appender::{
     non_blocking::WorkerGuard,
@@ -48,6 +49,7 @@ async fn main() -> Result<()> {
     log();
     trace!("Initialized logging");
 
+    init();
     let cmd = Command::parse();
     trace!("Parsed command: {cmd:#?}");
 
@@ -59,6 +61,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+// TODO: Move the init stuff elsewhere
 fn log() {
     let file_appender = rolling::never("/var/log", "to.log");
     let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
@@ -85,5 +88,29 @@ fn log() {
 
     if LOG_GUARD.set(guard).is_err() {
         error!("[UNREACHABLE] log() was called more than once");
+    }
+}
+
+fn init() {
+    trace!("Initializing...");
+    check_health();
+}
+
+#[inline]
+fn exists(program: &str) -> bool { which::which(program).is_ok() }
+
+fn check_health() {
+    trace!("Checking health");
+    // Git is also strongly recommended, but is technically unneeded for most functionality,
+    // assuming packages don't rely on it.
+    let programs = &[
+        "zstd", "tar", "bash", "chroot", "env", "grep", "cp", "touch", "tee", "sed", "mkdir",
+    ];
+
+    for program in programs {
+        if !exists(program) {
+            error!("To dependency '{program}' not found");
+            warn!("To functionality is likely to be impaired");
+        }
     }
 }
