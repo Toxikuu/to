@@ -1,3 +1,6 @@
+// structs/config.rs
+//! Config code
+
 use std::{
     fs,
     sync::LazyLock,
@@ -14,7 +17,7 @@ pub struct Config {
     pub log_level: String,
     pub strip:     bool,
     pub tests:     bool,
-    pub jobs:      String,
+    pub jobs:      usize,
     pub cflags:    String,
 }
 
@@ -24,8 +27,8 @@ impl Default for Config {
             log_level: "debug".to_string(),
             strip:     true,
             tests:     false,
-            jobs:      "".to_string(),
-            cflags:    "".to_string(),
+            jobs:      num_cpus::get(),
+            cflags:    "-march=x86-64-v2 -O2 -pipe".to_string(),
         }
     }
 }
