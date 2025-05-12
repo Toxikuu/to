@@ -71,6 +71,7 @@ impl Package {
             prei
         fi
 
+        touch /etc/to/exclude
         tar xvf '{dist_str}' -C /           \
             --keep-directory-symlink        \
             --numeric-owner                 \
