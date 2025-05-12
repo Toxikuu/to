@@ -69,8 +69,12 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
     - [ ] Add `--outdated` to show only outdated packages
     - [ ] Add `--installed` to show only installed (and outdated) packages
     - [ ] Add `--available` to show only available packages
-    - [ ] Add `--manifest` to view display the manifest
-        - [ ] Maybe display whether each path in the manifest exists(?)
+    - [ ] Add `--manifest` to display the manifest
+        - [ ] Displaying the manifest will check the manifest in the distfile,
+        since that one is complete and contains no exclusions, but fall back to
+        the installed manifest if the distfile's manifest doesn't exist or
+        couldn't be accessed.
+        - [ ] Display whether each path in the manifest exists
     - [x] Adjust the format for outdated packages to be 'name@iv -> v'
 - [ ] Write an explanation of how `to` works
     - [ ] Also write documentation (eventually)
@@ -94,3 +98,10 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 - [x] Add `to sync`
 - [ ] Add `to search`
 - [ ] Add `to --version`
+- [ ] Cache the output of `to vf`. This cache should reset every 4 hours, but
+should be overrideable by a flag. The cache should only trigger when `to vf` is
+called without arguments.
+- [ ] Add to-specific data in /var/cache/to/data/_/
+    - [ ] Have a file containing the number of installed packages
+    - [ ] Have a file logging the latest package actions (installs, updates,
+    removals, etc.)
