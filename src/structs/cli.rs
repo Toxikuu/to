@@ -20,6 +20,7 @@ use tracing::{
     warn,
 };
 
+use super::config::CONFIG;
 use crate::{
     exec,
     exec_interactive,
@@ -27,10 +28,7 @@ use crate::{
         Package,
         all_package_names,
     },
-    server::{
-        self,
-        core::ADDR,
-    },
+    server,
 };
 
 const SCRIPT_DIR: &str = "/usr/share/to/scripts";
@@ -307,7 +305,8 @@ impl CommandHandler {
             let dist = pkg.distfile();
             let distfile = dist.display();
             let filename = dist.file_name().unwrap().display();
-            if exec!("curl --data-binary '@{distfile}' '{ADDR}/up/{filename}'").is_err() {
+            let addr = &CONFIG.server_address;
+            if exec!("curl --data-binary '@{distfile}' '{addr}/up/{filename}'").is_err() {
                 error!("Failed to push {distfile} for {pkg} with curl")
             }
         }
@@ -325,8 +324,9 @@ impl CommandHandler {
             let filename = dist.file_name().unwrap().display();
             // This curl is silent, fails, shows errors, follows redirects, resumes, retries, and writes to a partfile
             // TODO: Rewrite this natively (reference the pardl proof-of-concept)
+            let addr = &CONFIG.server_address;
             if exec!(
-                "mkdir -pv {distfiledir} && curl -fsSL -C - --retry 3 -o '{distfile}'.part '{ADDR}/{filename}' && mv -vf '{distfile}'.part '{distfile}'"
+                "mkdir -pv {distfiledir} && curl -fsSL -C - --retry 3 -o '{distfile}'.part '{addr}/{filename}' && mv -vf '{distfile}'.part '{distfile}'"
             ).is_err() {
                 error!("Failed to pull {distfile} for {pkg} with curl")
             }
@@ -337,8 +337,7 @@ impl CommandHandler {
     // TODO: Remove this allow when SyncArgs is actually used
     #[allow(unused_variables)]
     fn handle_sync(&self, args: &SyncArgs) -> Result<()> {
-        // TODO: Make this configurable
-        const TO_PKG_UPSTREAM: &str = "https://github.com/Toxikuu/to-pkgs.git";
+        let repo = &CONFIG.package_repo;
         exec!(
             r#"
         if ! command -v git &>/dev/null; then
@@ -348,7 +347,7 @@ impl CommandHandler {
         cd /var/cache/to/pkgs
 
         if ! [ -d .git ]; then
-            git clone ${TO_PKG_UPSTREAM} .
+            git clone ${repo} .
         fi
 
         git pull

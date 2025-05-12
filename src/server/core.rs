@@ -10,17 +10,17 @@ use axum::{
 use tracing::info;
 
 use super::endpoints::*;
-
-pub const ADDR: &str = "127.0.0.1:7020";
+use crate::structs::config::CONFIG;
 
 pub async fn serve() -> anyhow::Result<()> {
     let router = Router::new()
         .route("/{filename}", get(download))
         .route("/up/{filename}", post(upload));
 
-    let listener = tokio::net::TcpListener::bind(ADDR).await?;
+    let addr = &CONFIG.server_address;
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, router).await?;
 
-    info!("Listening on {ADDR}");
+    info!("Listening on {addr}");
     Ok(())
 }
