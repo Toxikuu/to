@@ -1,5 +1,7 @@
 -include config.mk
 
+# TODO: Make the configure flags actually do stuff
+
 all: build
 
 build:
