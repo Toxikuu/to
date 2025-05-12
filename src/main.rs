@@ -1,5 +1,6 @@
 #![feature(iter_intersperse)]
 #![feature(stmt_expr_attributes)]
+#![feature(duration_constructors)]
 
 use std::{
     io,

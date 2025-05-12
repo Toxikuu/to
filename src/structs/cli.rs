@@ -26,7 +26,6 @@ use crate::{
     package::{
         Package,
         all_package_names,
-        vf::display_vf,
     },
     server::{
         self,
@@ -173,6 +172,9 @@ pub struct VfArgs {
 
     #[arg(long, short)]
     pub outdated_only: bool,
+
+    #[arg(long, short)]
+    pub ignore_cache: bool,
 }
 
 #[derive(Debug, Args)]
@@ -561,14 +563,22 @@ impl CommandHandler {
             })
             .collect::<Vec<_>>();
 
+        let mut vfs = Vec::new();
         for res in join_all(tasks).await {
             match res {
-                | Ok(Ok((n, v, uv, is_current))) => display_vf(&n, &v, &uv, is_current),
+                | Ok(Ok(vf)) => vfs.push(vf),
                 | Ok(_) => {},
                 | Err(e) => {
                     error!("Task join error: {e}");
                 },
             }
+        }
+
+        for vf in vfs {
+            vf.display();
+            if let Err(e) = vf.cache().permit(|e| e.to_string() == "Not recaching") {
+                warn!("Failed to cache vf '{vf:?}': {e}")
+            };
         }
 
         Ok(())
