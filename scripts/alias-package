@@ -6,7 +6,7 @@ pushd . &>/dev/null
 from="${1,,}"
 to="${2,,}"
 
-cd /var/cache/to/pkgs
+cd /var/db/to/pkgs
 
 if [ ! -e "$from/pkg" ]; then
     echo "From package '$from' does not exist" >&2

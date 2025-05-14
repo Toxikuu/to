@@ -68,7 +68,7 @@ impl Package {
     /// Creates a new package from its pkg file
     #[instrument(level = "debug")]
     fn new(name: &str) -> Self {
-        let out = sex!("/usr/share/to/scripts/gen.sh /var/cache/to/pkgs/{name}/pkg").unwrap();
+        let out = sex!("/usr/share/to/scripts/gen.sh /var/db/to/pkgs/{name}/pkg").unwrap();
         let lines = out.lines().map(str::trim).collect::<Vec<_>>();
 
         let [n, v, a, m, l, u, vf, t, s, d, kcfg] = &lines[..] else {
@@ -103,7 +103,7 @@ impl Package {
     // TODO: Use thiserror
     #[instrument(level = "debug")]
     pub fn from_s_file(name: &str) -> Result<Self> {
-        let s_file = format!("/var/cache/to/pkgs/{name}/s");
+        let s_file = format!("/var/db/to/pkgs/{name}/s");
         let s = read_to_string(&s_file)
             .inspect_err(|e| error!("Failed to read {s_file} for {name}: {e}"))
             .context("Failed to read s_file")?;
@@ -119,10 +119,10 @@ impl fmt::Display for Package {
     }
 }
 
-/// # Finds the names of all packages in /var/cache/to/pkgs
+/// # Finds the names of all packages in /var/db/to/pkgs
 #[instrument(level = "debug")]
 pub fn all_package_names() -> Vec<String> {
-    WalkDir::new("/var/cache/to/pkgs")
+    WalkDir::new("/var/db/to/pkgs")
         .min_depth(1)
         .max_depth(1)
         .into_iter()
@@ -164,7 +164,7 @@ mod test {
 
     #[test]
     fn test_all_package_names_depth() -> Result<(), Skip> {
-        let pkgdir = Path::new("/var/cache/to/pkgs");
+        let pkgdir = Path::new("/var/db/to/pkgs");
 
         if !pkgdir.exists() {
             skip!("Missing package directory")

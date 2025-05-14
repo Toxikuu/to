@@ -33,7 +33,7 @@ use crate::{
 
 // TODO: Make stagefile configurable
 const STAGEFILE: &str = "/var/tmp/lfstage/stages/lfstage3@2025-04-24_14-18-39.tar.xz";
-const MERGED: &str = "/var/cache/to/chroot/merged";
+const MERGED: &str = "/var/lib/to/chroot/merged";
 
 impl Package {
     pub fn build(&self) -> Result<()> {
@@ -141,16 +141,16 @@ impl Package {
     fn chroot_and_run(&self) -> Result<()> {
         let strip = CONFIG.strip;
         let tests = CONFIG.tests;
+        let cflags = &CONFIG.cflags;
+        let jobs = &CONFIG.jobs;
 
         info!("Entering chroot for {self}");
         exec!(
             r#"
         chroot {MERGED} \
             /usr/bin/env -i             \
-                HOME=/root              \
-                TERM=xterm-256color     \
-                PATH=/usr/bin:/usr/sbin \
-                MAKEFLAGS=-j$(nproc)    \
+                TO_CFLAGS="{cflags}"    \
+                TO_JOBS={jobs}          \
                 TO_STRIP={strip}        \
                 TO_TEST={tests}         \
             /runner
@@ -164,7 +164,7 @@ impl Package {
     fn save_distfile(&self) -> Result<()> {
         let dist = self.distfile();
         mkdir_p(self.distdir())?;
-        exec!("cp -vf '/var/cache/to/chroot/upper/pkg.tar.zst' {dist:?}")?;
+        exec!("cp -vf '/var/lib/to/chroot/upper/pkg.tar.zst' {dist:?}")?;
         info!("Saved distfile for {self}");
         Ok(())
     }
@@ -173,7 +173,7 @@ impl Package {
 fn setup_overlay() -> Result<()> {
     exec!(
         r#"
-        cd        /var/cache/to/chroot
+        cd        /var/lib/to/chroot
 
         # extract the stage3 if it's absent
         if [ ! -d lower/usr ]; then 
@@ -194,8 +194,8 @@ fn setup_overlay() -> Result<()> {
 fn clean_overlay() -> Result<()> {
     exec!(
         r#"
-        mkdir -pv /var/cache/to/chroot
-        cd        /var/cache/to/chroot
+        mkdir -pv /var/lib/to/chroot
+        cd        /var/lib/to/chroot
 
         mkdir -pv lower merged upper work
 

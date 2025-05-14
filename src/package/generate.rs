@@ -14,7 +14,7 @@ impl Package {
     pub fn generate(name: &str) {
         let pkg = super::Package::new(name);
         let s = serde_json::to_string_pretty(&pkg).expect("Failed to serialize");
-        write(format!("/var/cache/to/pkgs/{name}/s"), s).unwrap();
+        write(format!("/var/db/to/pkgs/{name}/s"), s).unwrap();
         info!("Generated {pkg}");
     }
 }

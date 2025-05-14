@@ -184,7 +184,7 @@ impl Message {
 
 impl Package {
     /// # Returns the message directory of a package
-    /// This directory is defined as /var/cache/to/pkgs/<package>/M
+    /// This directory is defined as /var/db/to/pkgs/<package>/M
     pub fn messagedir(&self) -> PathBuf { self.pkgfile().with_file_name("M") }
 
     /// # Collects all messages for a package
@@ -313,7 +313,7 @@ mod test {
 
     #[test]
     fn test_pulseaudio_messages() -> Result<(), Skip> {
-        let pkgdir = Path::new("/var/cache/to/pkgs");
+        let pkgdir = Path::new("/var/db/to/pkgs");
 
         if !pkgdir.exists() {
             skip!("Missing package directory")
@@ -325,7 +325,7 @@ mod test {
 
         let pkg = Package::from_s_file("pulseaudio").unwrap();
 
-        assert!(pkg.messagedir() == PathBuf::from("/var/cache/to/pkgs/pulseaudio/M"));
+        assert!(pkg.messagedir() == PathBuf::from("/var/db/to/pkgs/pulseaudio/M"));
         assert!(!pkg.collect_messages().is_empty());
         Ok(())
     }

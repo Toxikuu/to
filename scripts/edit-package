@@ -6,7 +6,7 @@ pushd . &>/dev/null
 n="${1%@*}" # leniently split the version field
 n="${n,,}"
 
-cd /var/cache/to/pkgs/"$n"
+cd /var/db/to/pkgs/"$n"
 
 check_existence() {
     if [ ! -e "pkg" ]; then

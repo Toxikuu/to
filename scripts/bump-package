@@ -8,7 +8,7 @@ n="${n,,}"
 nv="${1#*@}"
 new=${NEW:-$nv}
 
-cd /var/cache/to/pkgs/"$n"
+cd /var/db/to/pkgs/"$n"
 
 check_existence() {
     if [ ! -e "pkg" ]; then
@@ -23,7 +23,7 @@ finalize() {
 
     to lint      "$n" || return 2
     to generate  "$n" || return 3
-    to vf        "$n" | sed 's,\x1b\[[0-9;]*m,,g' | grep '^\[-\] ' && return 99
+    to vf -i     "$n" | sed 's,\x1b\[[0-9;]*m,,g' | grep '^\[-\] ' && return 99
 
     if ! $SKIP_BUILD; then
         to build "$n" || return 4

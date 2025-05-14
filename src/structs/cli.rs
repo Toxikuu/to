@@ -344,7 +344,7 @@ impl CommandHandler {
             die "git is not installed"
         fi
 
-        cd /var/cache/to/pkgs
+        cd /var/db/to/pkgs
 
         if ! [ -d .git ]; then
             git clone ${repo} .

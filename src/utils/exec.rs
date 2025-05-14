@@ -50,6 +50,7 @@ pub fn sex(command: &str) -> io::Result<String> {
 
 pub fn exec(command: &str) -> io::Result<()> {
     let command = prepend_source_base(command);
+    let command_clone = command.clone();
 
     let mut child = Command::new("bash")
         .arg("--noprofile")
@@ -90,7 +91,7 @@ pub fn exec(command: &str) -> io::Result<()> {
 
     let status = child.wait()?;
     if !status.success() {
-        error!("Command failed with status {status}");
+        error!("Command '{command_clone}' failed with status {status}");
         return Err(io::Error::new(
             io::ErrorKind::Other,
             format!("Command failed with status: {status}"),
@@ -129,7 +130,7 @@ pub fn exec_interactive(command: &str) -> io::Result<()> {
 
 fn prepend_source_base(command: &str) -> String {
     format!(
-        "TO_CFLAGS={} TO_JOBS={} source /usr/share/to/envs/base.env ; {command}",
+        r#"TO_CFLAGS="{}" TO_JOBS="{}" source /usr/share/to/envs/base.env ; {command}"#,
         CONFIG.cflags, CONFIG.jobs
     )
 }

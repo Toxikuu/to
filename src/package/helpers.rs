@@ -28,7 +28,7 @@ impl Package {
     pub fn distfile(&self) -> PathBuf { self.distdir().join(format!("{self}.tar.zst")) }
 
     // PERF: Strong memoization candidate
-    pub fn pkgdir(&self) -> PathBuf { PathBuf::from("/var/cache/to/pkgs").join(&self.name) }
+    pub fn pkgdir(&self) -> PathBuf { PathBuf::from("/var/db/to/pkgs").join(&self.name) }
 
     // PERF: Strong memoization candidate
     pub fn pkgfile(&self) -> PathBuf { self.pkgdir().join("pkg") }
@@ -43,7 +43,7 @@ impl Package {
     pub fn sourcedir(&self) -> PathBuf { PathBuf::from("/var/cache/to/sources").join(&self.name) }
 
     // PERF: Strong memoization candidate
-    pub fn datadir(&self) -> PathBuf { PathBuf::from("/var/cache/to/data").join(&self.name) }
+    pub fn datadir(&self) -> PathBuf { PathBuf::from("/var/db/to/data").join(&self.name) }
 
     // PERF: Strong memoization candidate
     pub fn is_installed(&self) -> bool { self.datadir().join("IV").exists() }

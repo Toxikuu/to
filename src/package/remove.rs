@@ -80,7 +80,7 @@ pub fn is_hidden(entry: &DirEntry) -> bool {
 
 /// # Find all manifests
 /// Ignores hidden entries and entries that aren't manifests
-/// Dir is usually /var/cache/to/data
+/// Dir is usually /var/db/to/data
 #[instrument]
 pub fn locate<P>(dir: P) -> Vec<PathBuf>
 where
@@ -141,7 +141,7 @@ fn find_unique(
 /// # Finds paths unique to a manifest
 /// Also prefixes those paths with /
 pub fn find_unique_paths(manifest: &PathBuf) -> Result<Vec<String>> {
-    let manifests = locate("/var/cache/to/data");
+    let manifests = locate("/var/db/to/data");
     let data = read_all_manifests(&manifests)?;
     find_unique(&data, manifest)
 }

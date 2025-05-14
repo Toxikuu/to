@@ -3,13 +3,13 @@
 set -e
 pushd . &>/dev/null
 
-cd /var/cache/to/pkgs
+cd /var/db/to/pkgs
 
 # Common variables
 m="Tox"
 
 check_existence() {
-    if [ -e "/var/cache/to/pkgs/$n/pkg" ]; then
+    if [ -e "/var/db/to/pkgs/$n/pkg" ]; then
         echo "Package '$n' already exists" >&2
         exit 2
     fi
@@ -60,7 +60,7 @@ template() {
             -e "s|ABOUT|$a|"        \
             -e "s|LICENSE|$l|"      \
             -e "s|MAINTAINER|$m|"   \
-        /usr/share/to/template > /var/cache/to/pkgs/"$n"/pkg
+        /usr/share/to/template > /var/db/to/pkgs/"$n"/pkg
 
         rm -f "$TMP1" "$TMP2"
 
@@ -104,7 +104,7 @@ template() {
             -e "s|ABOUT|$a|"        \
             -e "s|LICENSE|${l[*]}|" \
             -e "s|MAINTAINER|$m|"   \
-        /usr/share/to/template > "/var/cache/to/pkgs/$n/pkg"
+        /usr/share/to/template > "/var/db/to/pkgs/$n/pkg"
 
         rm -f "$TMP1"
     elif [[ "$1" == "2"*"/"* ]]; then
@@ -131,7 +131,7 @@ template() {
             -e "s|2b|b|g"   \
             -e "s|SOURCE|s|g"   \
             -e "s|VCMD|vf|g"    \
-        "/var/ports/$repo/$n/BUILD" > "/var/cache/to/pkgs/$n/pkg"
+        "/var/ports/$repo/$n/BUILD" > "/var/db/to/pkgs/$n/pkg"
 
     elif [[ "$1" == *"@"* ]]; then
 
@@ -150,7 +150,7 @@ template() {
             -e "s|NAME|$n|"         \
             -e "s|VERSION|$v|"      \
             -e "s|MAINTAINER|$m|"   \
-        /usr/share/to/template > /var/cache/to/pkgs/"$n"/pkg
+        /usr/share/to/template > /var/db/to/pkgs/"$n"/pkg
 
     else
 
@@ -162,7 +162,7 @@ template() {
 
 finalize() {
 
-    cd "/var/cache/to/pkgs/${n:?}"
+    cd "/var/db/to/pkgs/${n:?}"
     . ./pkg
 
     rm -f deps
