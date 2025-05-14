@@ -61,7 +61,9 @@ WORKING ON IT. SOON I PROMISE.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
-- [ ] Add zstd to LFStage
+- [ ] Drop the 2 pkg-add template once I've transferred all the packages I want
+- [x] Stop using /var/cache for everything. lol.
+- [x] Add zstd to LFStage
 - [ ] Use the pardl poc instead of curl for pull
 - [ ] Improve `to view`
     - [x] Add `--dependencies` and `--deep-dependencies`
@@ -98,10 +100,9 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 - [x] Add `to sync`
 - [ ] Add `to search`
 - [ ] Add `to --version`
-- [ ] Cache the output of `to vf`. This cache should reset every 4 hours, but
-should be overrideable by a flag. The cache should only trigger when `to vf` is
-called without arguments.
-- [ ] Add to-specific data in /var/cache/to/data/_/
+- [x] Cache the output of `to vf`. This cache should reset every 4 hours, but
+should be overrideable by a flag.
+- [ ] Add to-specific data in /var/db/to/data/_/
     - [ ] Have a file containing the number of installed packages
     - [ ] Have a file logging the latest package actions (installs, updates,
     removals, etc.)
