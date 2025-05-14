@@ -28,6 +28,7 @@ ifeq ($(ENABLE_TOOLS),1)
 	install -Dm644 template                    -t $(DESTDIR)/usr/share/to/
 endif
 
+	install -vdm755 $(DESTDIR)/etc/to
 ifeq ($(ENABLE_CONF),1)
 	install -Dm644 $(wildcard etc/*)           -t $(DESTDIR)/etc/to/
 endif
@@ -42,20 +43,21 @@ endif
 	# TODO: Install docs once I write some
 
 ifeq ($(ENABLE_TOOLS),1)
-	install -dm755                                $(DESTDIR)/var/cache/to/chroot
+	install -dm755                                $(DESTDIR)/var/lib/to/chroot
 	install -dm755                                $(DESTDIR)/var/cache/to/sources
 endif
 
+	install -dm755                                $(DESTDIR)/var/db/to/data
+	install -dm755                                $(DESTDIR)/var/db/to/pkgs
 	install -dm755                                $(DESTDIR)/var/cache/to/data
 	install -dm755                                $(DESTDIR)/var/cache/to/dist
-	install -dm755                                $(DESTDIR)/var/cache/to/pkgs
 
 ifeq ($(ENABLE_GIT),1)
-	@if [ -d "$(DESTDIR)/var/cache/to/pkgs/.git" ]; then \
+	@if [ -d "$(DESTDIR)/var/db/to/pkgs/.git" ]; then \
 		echo "Package repo exists, skipping clone."; \
 	else \
 		echo "Cloning package repo..."; \
-		git clone --depth=1 --single-branch --branch master https://github.com/Toxikuu/to-pkgs.git $(DESTDIR)/var/cache/to/pkgs; \
+		git clone --depth=1 --single-branch --branch master https://github.com/Toxikuu/to-pkgs.git $(DESTDIR)/var/db/to/pkgs; \
 	fi
 endif
 
