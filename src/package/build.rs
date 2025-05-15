@@ -42,6 +42,7 @@ impl Package {
         self.fetch_sources()?;
         self.populate_overlay()?;
         self.chroot_and_run()?;
+        self.cache_stuff()?;
         self.save_distfile()?;
 
         Ok(())
@@ -166,6 +167,67 @@ impl Package {
         mkdir_p(self.distdir())?;
         exec!("cp -vf '/var/lib/to/chroot/upper/pkg.tar.zst' {dist:?}")?;
         info!("Saved distfile for {self}");
+        Ok(())
+    }
+
+    /// # """"Cache"""" reusable stuff
+    fn cache_stuff(&self) -> Result<()> {
+        const LOWER: &str = "/var/lib/to/chroot/lower";
+        const UPPER: &str = "/var/lib/to/chroot/upper";
+
+        // Cache make-ca certificates
+        if self.dependencies.iter().any(|d| d.name == "make-ca") {
+            debug!("Caching make-ca certificates if needed");
+
+            mkdir_p(Path::new(LOWER).join("etc/ssl"))?;
+            mkdir_p(Path::new(LOWER).join("etc/pki"))?;
+            exec!(
+                "
+                if [ -d {UPPER}/etc/ssl/certs ]; then
+                    cp -af {UPPER}/etc/ssl/certs {LOWER}/etc/ssl/
+                fi
+                "
+            )
+            .context("Failed to cache make-ca certificates (ssl)")?;
+
+            exec!(
+                "
+                if [ -d {UPPER}/etc/pki/anchors ]; then
+                    rm -rf {LOWER}/etc/pki/anchors/*
+                    cp -af {UPPER}/etc/pki/anchors/* {LOWER}/etc/pki/anchors
+                fi
+
+                if [ -d {UPPER}/etc/pki/tls ]; then
+                    rm -rf {LOWER}/etc/pki/tls/*
+                    cp -af {UPPER}/etc/pki/tls/* {LOWER}/etc/pki/tls
+                fi
+                "
+            )
+            .context("Failed to cache make-ca certificates (pki)")?;
+        }
+
+        // Cache rustup toolchains to avoid redownloading them
+        if self.dependencies.iter().any(|d| d.name == "rust") {
+            debug!("Caching rustup toolchains if needed");
+
+            mkdir_p(Path::new(LOWER).join("opt/rustup/toolchains"))?;
+            mkdir_p(Path::new(LOWER).join("opt/rustup/update-hashes"))?;
+            // TODO: Copying bs may happen here where nightly gets copied to nightly/nightly.
+            // Testing needed. Probably use rsync if that happens.
+            exec!(
+                "
+                if [ -d {UPPER}/opt/rustup/toolchains ]; then
+                    cp -af {UPPER}/opt/rustup/toolchains/* {LOWER}/opt/rustup/toolchains/
+                fi
+
+                if [ -d {UPPER}/opt/rustup/update-hashes ]; then
+                    cp -af {UPPER}/opt/rustup/update-hashes/* {LOWER}/opt/rustup/update-hashes/
+                fi
+                "
+            )
+            .context("Failed to cache rustup toolchains")?
+        }
+
         Ok(())
     }
 }
