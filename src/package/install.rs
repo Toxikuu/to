@@ -87,6 +87,8 @@ impl Package {
 
         if is_function posti; then
             posti
+        elif is_function i; then
+            i
         fi
 
         "#
