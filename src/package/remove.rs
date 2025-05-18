@@ -82,13 +82,13 @@ pub fn is_hidden(entry: &DirEntry) -> bool {
 /// Ignores hidden entries and entries that aren't manifests
 /// Dir is usually /var/db/to/data
 #[instrument]
-pub fn locate<P>(dir: P) -> Vec<PathBuf>
+pub fn locate<P>(dir: P, depth: usize) -> Vec<PathBuf>
 where
     P: AsRef<Path> + Debug,
 {
     WalkDir::new(dir)
-        .min_depth(2) // TODO: Ensure these work
-        .max_depth(2)
+        .min_depth(depth)
+        .max_depth(depth)
         .into_iter()
         .filter_entry(|e| !is_hidden(e))
         .filter_map(Result::ok)
@@ -123,6 +123,9 @@ fn find_unique(
     this_manifest: &PathBuf,
 ) -> Result<Vec<String>> {
     debug!("Finding unique files for {this_manifest:?}");
+
+    error!("[FIXME] ALL DATA: {all_data:#?}");
+    assert!(all_data.contains_key(this_manifest));
     let this_data = all_data.get(this_manifest).context("Missing manifest")?;
     let all_other_lines = all_data
         .iter()
@@ -141,7 +144,8 @@ fn find_unique(
 /// # Finds paths unique to a manifest
 /// Also prefixes those paths with /
 pub fn find_unique_paths(manifest: &PathBuf) -> Result<Vec<String>> {
-    let manifests = locate("/var/db/to/data");
+    // Here a depth of 2 is used because the we are in the data directory for all packages
+    let manifests = locate("/var/db/to/data", 2);
     let data = read_all_manifests(&manifests)?;
     find_unique(&data, manifest)
 }
@@ -246,7 +250,9 @@ pub fn find_dead_files(package: &Package) -> Result<Vec<String>> {
     }
 
     // Read all manifests for the current package
-    let manifests = locate(package.datadir());
+    // Here a depth of 1 is used because the we are in the subdirectory for a specific package in
+    // the data directory
+    let manifests = locate(package.datadir(), 1);
     let data = read_all_manifests(&manifests)?;
 
     let this_manifest = package
