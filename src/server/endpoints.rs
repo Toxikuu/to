@@ -50,7 +50,7 @@ pub async fn download(Path(filename): Path<String>) -> impl IntoResponse {
             // Add content disposition header
             headers.insert(
                 header::CONTENT_DISPOSITION,
-                format!("attachment; filename=\"{}\"", filename)
+                format!("attachment; filename=\"{filename}\"")
                     .parse()
                     .unwrap(),
             );
