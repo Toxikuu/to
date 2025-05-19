@@ -61,6 +61,8 @@ WORKING ON IT. SOON I PROMISE.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
+- [x] Make `to edit` not rely on the stale s file
+    - Fixed by running `to lint` after `to generate`
 - [ ] Drop the 2 pkg-add template once I've transferred all the packages I want
 - [x] Stop using /var/cache for everything. lol.
 - [x] Add zstd to LFStage

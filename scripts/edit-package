@@ -19,8 +19,8 @@ finalize() {
 
     . ./pkg
 
-    to lint      "$n" || return 2
     to generate  "$n" || return 3
+    to lint      "$n" || return 2
     to vf -i     "$n" | sed 's,\x1b\[[0-9;]*m,,g' | grep '^\[-\] ' && return 99
 
     if ! $SKIP_BUILD; then
