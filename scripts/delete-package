@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+set -e
+pushd . &>/dev/null
+
+n="${1%@*}" # leniently split the version field
+n="${n,,}"
+
+cd /var/db/to/pkgs
+
+check_existence() {
+    if [ ! -e "$n/pkg" ]; then
+        echo "Package '$n' does not exist" >&2
+        exit 2
+    fi
+}
+
+check_existence
+rm -rvf "${n:?}"
+
+if [ -z "$(git status -s "$n")" ]; then
+    echo "No changes made"
+    return 0
+fi
+
+git rm -r "$n"
+COMMIT=$(mktemp)
+sed \
+    -e "s,<name>,$n,g"      \
+    -e "s,<version>,$v,g"   \
+/usr/share/to/git-templates/delete-package > "$COMMIT"
+git commit --template="$COMMIT"
+
+rm -f "$COMMIT"
+
+popd &>/dev/null

@@ -27,6 +27,7 @@ use crate::{
     package::{
         Package,
         all_package_names,
+        pull::multipull,
     },
     server,
 };
@@ -66,6 +67,13 @@ pub struct EditArgs {
 
     #[arg(long, short)]
     pub skip_build: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct DeleteArgs {
+    /// Just the package name
+    #[arg(value_name = "PACKAGE", num_args=1..)]
+    pub packages: Vec<String>,
 }
 
 #[derive(Debug, Args)]
@@ -207,6 +215,8 @@ pub enum SubCommand {
     /// Edit a package
     Edit(EditArgs),
     /// Bump a package's version
+    Delete(DeleteArgs),
+    /// Delete a package from the repo
     Bump(BumpArgs),
     /// Alias a package
     Alias(AliasArgs),
@@ -277,6 +287,7 @@ impl CommandHandler {
             | SubCommand::Add(args) => self.handle_add(args),
             | SubCommand::Alias(args) => self.handle_alias(args),
             | SubCommand::Edit(args) => self.handle_edit(args),
+            | SubCommand::Delete(args) => self.handle_delete(args),
             | SubCommand::Bump(args) => self.handle_bump(args).await,
             | SubCommand::Build(args) => self.handle_build(args),
             | SubCommand::Lint(args) => self.handle_lint(args),
@@ -297,6 +308,7 @@ impl CommandHandler {
     #[allow(unused_variables)]
     async fn handle_serve(&self, args: &ServeArgs) -> Result<()> { server::core::serve().await }
 
+    // TODO: Check if an identical file exists before pushing (ideally via hash)
     async fn handle_push(&self, args: &PushArgs) -> Result<()> {
         let pkgs = none_to_all!(args);
 
@@ -316,22 +328,20 @@ impl CommandHandler {
     async fn handle_pull(&self, args: &PullArgs) -> Result<()> {
         let pkgs = none_to_all!(args);
 
-        for pkg_str in &pkgs {
-            let pkg = form_package_or_continue!(pkg_str);
-            let dist = pkg.distfile();
-            let distfiledir = dist.parent().unwrap().display();
-            let distfile = dist.display();
-            let filename = dist.file_name().unwrap().display();
-            // This curl is silent, fails, shows errors, follows redirects, resumes, retries, and writes to a partfile
-            // TODO: Rewrite this natively (reference the pardl proof-of-concept)
-            let addr = &CONFIG.server_address;
-            if exec!(
-                "mkdir -pv {distfiledir} && curl -fsSL -C - --retry 3 -o '{distfile}'.part '{addr}/{filename}' && mv -vf '{distfile}'.part '{distfile}'"
-            ).is_err() {
-                error!("Failed to pull {distfile} for {pkg} with curl")
-            }
-        }
-        Ok(())
+        let pkgs = pkgs
+            .iter()
+            .filter_map(|p| match Package::from_s_file(p) {
+                | Ok(p) => Some(p),
+                | Err(e) => {
+                    error!("Failed to form {p}: {e}");
+                    None
+                },
+            })
+            .collect::<Vec<_>>();
+
+        // TODO: Send a clear error message for 404s, and maybe explain that the package must be
+        // pushed to the server
+        multipull(&pkgs).await
     }
 
     // TODO: Remove this allow when SyncArgs is actually used
@@ -399,6 +409,18 @@ impl CommandHandler {
             };
             let pkg = form_package_or_continue!(name);
             info!("Edited {pkg}");
+        }
+        Ok(())
+    }
+
+    fn handle_delete(&self, args: &DeleteArgs) -> Result<()> {
+        for pkg_str in &args.packages {
+            let name = pkg_str.split_once('@').map(|(n, _)| n).unwrap_or(pkg_str);
+            if exec_interactive!("{SCRIPT_DIR}/delete-package {name}",).is_err() {
+                error!("Failed to delete {pkg_str}");
+                continue;
+            };
+            info!("Deleted {pkg_str}");
         }
         Ok(())
     }
