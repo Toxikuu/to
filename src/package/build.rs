@@ -3,6 +3,7 @@
 use std::{
     fs::{
         copy,
+        read_dir,
         write,
     },
     path::{
@@ -14,6 +15,7 @@ use std::{
 use anyhow::{
     Context,
     Result,
+    bail,
 };
 use fshelpers::{
     mkdir_p,
@@ -41,11 +43,30 @@ impl Package {
         setup_overlay()?;
         self.fetch_sources()?;
         self.populate_overlay()?;
+        self.pre_build_hook()?;
         self.chroot_and_run()?;
+        self.qa()?;
         self.cache_stuff()?;
         self.save_distfile()?;
 
         Ok(())
+    }
+
+    fn pre_build_hook(&self) -> Result<()> {
+        debug!("Checking for pre-build steps for {self}...");
+        let pkgfile = &self.pkgfile();
+
+        exec!(
+            "
+            source {pkgfile}
+            if is_function p; then
+                echo 'Executing pre-build steps for {self}'
+                p
+            fi
+            ",
+            pkgfile = pkgfile.display(),
+        )
+        .with_context(|| format!("Failed to execute pre-build steps for {self}"))
     }
 
     // NOTE: Dependencies should be installed after the chroot is entered
@@ -158,6 +179,28 @@ impl Package {
         "#
         )
         .context("Build failure in chroot")?;
+
+        Ok(())
+    }
+
+    // TODO: Refactor this to be more structured like the lint system later
+    // TODO: Add a QA error type
+    fn qa(&self) -> Result<()> {
+        // D empty
+        {
+            let destdir = Path::new(MERGED).join("D");
+            if read_dir(destdir)?.last().is_none() {
+                bail!("D is empty")
+            }
+        }
+
+        // /usr/local used
+        {
+            let usrlocal = Path::new(MERGED).join("usr/local");
+            if read_dir(usrlocal).is_ok() {
+                bail!("usrlocal used")
+            }
+        }
 
         Ok(())
     }
