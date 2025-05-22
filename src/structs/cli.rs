@@ -202,6 +202,7 @@ pub struct PullArgs {
 
 #[derive(Debug, Args)]
 pub struct SyncArgs {
+    #[arg(long, short)]
     pub branch: Option<String>,
 }
 
@@ -363,6 +364,7 @@ impl CommandHandler {
 
         git fetch origin {branch}
         git checkout "{branch}" || git checkout -b "{branch}" "origin/{branch}"
+        git merge --ff-only origin/{branch}
             "#,
             branch = args
                 .branch
