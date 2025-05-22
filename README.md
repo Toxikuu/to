@@ -66,7 +66,7 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 - [ ] Drop the 2 pkg-add template once I've transferred all the packages I want
 - [x] Stop using /var/cache for everything. lol.
 - [x] Add zstd to LFStage
-- [ ] Use the pardl poc instead of curl for pull
+- [x] Use the pardl poc instead of curl for pull
 - [ ] Improve `to view`
     - [x] Add `--dependencies` and `--deep-dependencies`
     - [ ] Add `--distfiles` to show available distfiles for a package
@@ -92,7 +92,10 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 - [x] Write `to lint`
     - [x] Add a lint "IlOpportunity" for missed il usage, similar to def's lint
     - [ ] Remove the aliases lint since it appears to neither work nor matter
-- [ ] Add post-build QA checks
+        - [ ] Update the alias thing does matter, but only for deep
+        dependencies. Not sure how I plan to work around this ngl.
+- [x] Add post-build QA checks
+     - [ ] Make them less shit
 - [x] Add `--debug` for `to view`, and change the default behavior to give
       something human readable.
 - [x] Add `to alias`
@@ -103,8 +106,16 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 - [ ] Add `to search`
 - [ ] Add `to --version`
 - [x] Cache the output of `to vf`. This cache should reset every 4 hours, but
-should be overrideable by a flag.
+  should be overrideable by a flag.
 - [ ] Add to-specific data in /var/db/to/data/_/
     - [ ] Have a file containing the number of installed packages
+    - [ ] Have a file logging the current action (eg. building tree, installing
+    popt, removing glibc)
     - [ ] Have a file logging the latest package actions (installs, updates,
     removals, etc.)
+- [x] Drop c_c in base.env because it's very flaky
+    - [ ] Fix associated build failures
+- [ ] Record configure options to /var/db/to/data/$n/cfg. This would be done by
+  packaging /_cfg_opts into the tarball, similar to MANIFEST.
+- [ ] Provide an official stage2.5ish. Ensure the presence of zstd. Also
+  automatically install `to` to it.
