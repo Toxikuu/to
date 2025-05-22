@@ -1,7 +1,7 @@
 log_level = "trace"
 tests = true
 strip = true
-jobs = 18
+# jobs = 16
 cflags = "-march=native -02 -pipe"
 server_address = "127.0.0.1:7020"
 package_repo = "https://github.com/Toxikuu/to-pkgs.git"
