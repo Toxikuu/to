@@ -14,21 +14,8 @@ impl Package {
     /// - 3 => 2, dependencies, kcfg
     /// - 4 => 3, upstream, sources, distfile, maintainer
     pub fn view(&self, detail: u8) {
-        let name = &self.name;
-        let version = &self.version;
-
-        if self.is_installed() {
-            if self.is_current() {
-                println!("  \x1b[32;1m{name}@{version}\x1b[0m");
-            } else {
-                let iv = self
-                    .installed_version()
-                    .expect("[UNREACHABLE] Package is installed but iv not found");
-                println!("  \x1b[31;1m{name}@{iv} -> {version}\x1b[0m");
-            }
-        } else {
-            println!("  \x1b[30;1m{name}@{version}\x1b[0m");
-        }
+        // TODO: Format this with [*] name@version instead
+        println!("{self:+}");
 
         if detail == 0 {
             return;

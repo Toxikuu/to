@@ -40,7 +40,10 @@ use crate::{
         CLI,
         SubCommand,
     },
-    utils::parse::is_commit_sha,
+    utils::{
+        commit_hash::try_shorten,
+        parse::is_commit_sha,
+    },
 };
 
 impl Package {
@@ -68,18 +71,18 @@ impl Package {
 
         if let SubCommand::Vf(args) = &*CLI {
             if args.ignore_cache {
-                debug!("Ignoring vf cache for {self}");
+                debug!("Ignoring vf cache for {self:-}");
             } else {
                 // Try to uncache
                 // TODO: Kinda cursed, not sure if I wanna keep it this way. Maybe I should only cache the
                 // upstream version instead of the whole Vf struct.
                 match Vf::uncache(self) {
                     | Ok(vf) => {
-                        debug!("Vf cache hit for {self}");
+                        debug!("Vf cache hit for {self:-}");
                         return Ok(Some(vf.uv));
                     },
                     | Err(e) => {
-                        trace!("Cache miss for {self}: {e}");
+                        trace!("Cache miss for {self:-}: {e}");
                     },
                 }
             }
@@ -87,7 +90,7 @@ impl Package {
 
         let vf_cmd = if let Some(vf) = &self.version_fetch {
             if vf == "no" {
-                debug!("Version fetch is disabled for {self}");
+                debug!("Version fetch is disabled for {self:-}");
                 return Ok(None);
             }
             format!("u={u} {vf} | tail -n1")
@@ -98,7 +101,7 @@ impl Package {
         };
 
         let estimate =
-            sex!("{vf_cmd}").with_context(|| format!("Failed to fetch version for {self}"));
+            sex!("{vf_cmd}").with_context(|| format!("Failed to fetch version for {self:-}"));
 
         Ok(Some(
             estimate?
@@ -113,7 +116,7 @@ impl Package {
 
     pub async fn vf(&self) -> Result<Vf> {
         let uv = self.version_fetch().await.map_err(|e| {
-            error!("Failed to fetch upstream version for {self}: {e}");
+            error!("Failed to fetch upstream version for {self:-}: {e}");
             anyhow!("Failed to fetch upstream")
         })?;
 
@@ -123,7 +126,7 @@ impl Package {
         match uv {
             | Some(uv) => Ok(Vf::new(n, v, &uv)),
             | None => {
-                debug!("Upstream version fetching is disabled for {self}. Skipping...");
+                debug!("Upstream version fetching is disabled for {self:-}. Skipping...");
                 bail!("Disabled");
             },
         }
@@ -155,7 +158,7 @@ impl Vf {
     /// # Displays the vf for a single package
     pub fn display(&self) {
         let n = &self.n;
-        let v = &self.v;
+        let v = try_shorten(&self.v); // TODO: Document that only the local version is shortened, and why
         let uv = &self.uv;
 
         if self.is_current {
@@ -180,13 +183,13 @@ impl Vf {
         )?;
 
         if cache_file.exists() {
-            debug!("Not recaching vf for {}@{}", &self.n, &self.v);
+            debug!("Not recaching vf for {}@{}", &self.n, try_shorten(&self.v));
             bail!("Not recaching")
         }
 
         let ser = serde_json::to_string_pretty(&self)?;
         write(cache_file, &ser).context("Failed to write cache")?;
-        debug!("Cached vf for {}@{}", &self.n, &self.v);
+        debug!("Cached vf for {}@{}", &self.n, try_shorten(&self.v));
 
         Ok(())
     }
