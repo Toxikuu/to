@@ -1,3 +1,4 @@
+pub mod actions;
 pub mod build;
 pub mod dep;
 pub mod generate;
@@ -45,9 +46,57 @@ use crate::{
         },
     },
     sex,
-    utils::parse::us_array,
+    utils::{
+        commit_hash,
+        parse::us_array,
+    },
 };
 
+/// # The package struct for `to`.
+///
+/// This struct contains metadata about the package obtained from its s file. It also has numerous
+/// methods.
+///
+/// # Notes
+/// This struct has several different `Display` formatting options for use in different contexts:
+/// * `{self}`          - name@version
+/// * `{self:-}`        - name@version, where the version if truncated if it's a commit hash
+/// * `{self:+}`        - name@version, with (full) colors based on install status, where the
+///   version is truncated if it's a commit hash
+///
+/// # Terms
+/// * s file            - A file containing the package's serialized metadata.
+/// * pkg file          - A bash script defining the package, its metadata, and its build instructions.
+/// * dist file         - A zstd-compressed tarball containing distribution-ready files for a package.
+/// * dl                - A download-ish URI. This can be the URL for a git repo, a download link
+///   for a file, or another package. Download links may also contain a destination specified by
+///   'link -> destination'.
+///
+/// # Fields
+/// * `name`            - The package's name.
+/// * `version`         - The package's version. Can be semver, datever, or a commit hash. Special
+///   versions like 9999 are not currently supported.
+/// * `about`           - A brief description of the package.
+/// * `maintainer`      - The maintainer of the pkg file, and usually the person who builds the
+///   dist file.
+/// * `licenses`        - Zero or more licenses under which the package is licensed. Some projects
+///   have no license -- iana-etc being a notable example. This should be addressed when displaying
+///   licenses.
+///
+/// * `upstream`        - The package's upstream url, if any.
+/// * `version_fetch`   - The command necessary to fetch the package's latest version. This usually
+///   references the upstream.
+///
+/// * `tags`            - Zero or more categorizations/keywords for the package. These are
+///   currently not standardized, though they may be eventually.
+/// * `sources`         - Zero or more dls, or another package. If the dl is not prefixed by a
+///   character and a comma, explicitly indicating a source kind, the source kind is guessed.
+/// * `dependencies`    - Zero or more dependencies. These may be build-only, runtime-only, or
+///   always required.
+/// * `kcfg`            - Zero or more kernel config options required for the correct functioning
+///   of a package. These are formatted as `option = y/m` or `option_suboption = n`. In other words,
+///   the `CONFIG_` prefix may be elided, and the yes-module-no tristate can be expressed by the first
+///   character of those states, delimited by a '/'. For instance, `y/m` means yes or module.
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Package {
     pub name:       String,
@@ -114,9 +163,36 @@ impl Package {
     }
 }
 
+/// See the documentation for `Package`
 impl fmt::Display for Package {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}@{}", self.name, self.version)
+        if f.sign_minus() {
+            write!(
+                f,
+                "{}@{}",
+                self.name,
+                commit_hash::try_shorten(&self.version)
+            )
+        } else if f.sign_plus() {
+            if !self.is_installed() {
+                write!(f, "  \x1b[30;1m{}@{}\x1b[0m", self.name, self.version)
+            } else if self.is_current() {
+                write!(f, "  \x1b[32;1m{}@{}\x1b[0m", self.name, self.version)
+            } else {
+                // WARN: This branch ({package:+} formatting) is very subject to change
+                write!(
+                    f,
+                    "  \x1b[31;1m{}@{iv} -> {}\x1b[0m",
+                    self.name,
+                    self.version,
+                    iv = self
+                        .installed_version()
+                        .expect("Package is installed but iv not found")
+                )
+            }
+        } else {
+            write!(f, "{}@{}", self.name, self.version)
+        }
     }
 }
 
