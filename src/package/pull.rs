@@ -48,13 +48,12 @@ use crate::structs::config::CONFIG;
 pub async fn multipull(pkgs: &[Package]) -> Result<()> {
     let addr = &CONFIG.server_address;
     let (client, m, sty) = setup().await?;
-    let distfiles = pkgs.iter().map(|p| p.distfile()).collect::<Vec<_>>();
-
     let mut tasks = Vec::new();
 
     // distfile contains the full path here
-    for distfile in distfiles {
-        let distdir = distfile.parent().expect("Distfile should have a parent");
+    for pkg in pkgs {
+        let distfile = pkg.distfile();
+        let distdir = pkg.distdir();
         mkdir_p(distdir)?;
 
         let client = client.clone();
@@ -68,7 +67,7 @@ pub async fn multipull(pkgs: &[Package]) -> Result<()> {
         // set up progress bar
         let pb = m.add(ProgressBar::new(0));
         pb.set_style(sty.clone());
-        pb.set_message(filename.clone());
+        pb.set_message(format!("{pkg:-}"));
         pb.set_prefix("\x1b[37;1m[\x1b[36mo\x1b[37m]\x1b[0m");
         pb.set_position(0);
         pb.set_length(1);
