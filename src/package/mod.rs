@@ -6,6 +6,7 @@ pub mod install;
 pub mod lint;
 pub mod message;
 pub mod prune;
+pub mod pull;
 pub mod remove;
 pub mod source;
 pub mod vf;
