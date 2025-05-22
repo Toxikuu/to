@@ -24,3 +24,7 @@ pub fn is_download(s: &str) -> bool {
     let filename = s.rsplit_once("/").unwrap().1;
     filename.contains(".") && !filename.ends_with(".git")
 }
+
+/// TODO: Move this somewhere more fitting. Organization is hard.
+#[inline]
+pub fn exists(program: &str) -> bool { which::which(program).is_ok() }

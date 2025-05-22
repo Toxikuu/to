@@ -6,6 +6,7 @@
 use anyhow::{
     Context,
     Result,
+    bail,
 };
 use clap::{
     Args,
@@ -30,6 +31,7 @@ use crate::{
         pull::multipull,
     },
     server,
+    utils::file::exists,
 };
 
 const SCRIPT_DIR: &str = "/usr/share/to/scripts";
@@ -199,7 +201,9 @@ pub struct PullArgs {
 }
 
 #[derive(Debug, Args)]
-pub struct SyncArgs {}
+pub struct SyncArgs {
+    pub branch: Option<String>,
+}
 
 #[derive(Debug, Parser)]
 pub enum SubCommand {
@@ -344,24 +348,27 @@ impl CommandHandler {
         multipull(&pkgs).await
     }
 
-    // TODO: Remove this allow when SyncArgs is actually used
-    #[allow(unused_variables)]
     fn handle_sync(&self, args: &SyncArgs) -> Result<()> {
-        let repo = &CONFIG.package_repo;
+        if !exists("git") {
+            bail!("Missing git")
+        }
+
         exec!(
             r#"
-        if ! command -v git &>/dev/null; then
-            die "git is not installed"
-        fi
-
         cd /var/db/to/pkgs
 
         if ! [ -d .git ]; then
-            git clone ${repo} .
+            git clone --depth=1 --no-single-branch {repo} .
         fi
 
-        git pull
-        "#
+        git fetch origin {branch}
+        git checkout "{branch}" || git checkout -b "{branch}" "origin/{branch}"
+            "#,
+            branch = args
+                .branch
+                .as_deref()
+                .unwrap_or(&CONFIG.package_repo_branch),
+            repo = &CONFIG.package_repo,
         )
         .context("Failed to sync repo")
     }

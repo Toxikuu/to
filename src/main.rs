@@ -1,6 +1,7 @@
 #![feature(iter_intersperse)]
 #![feature(stmt_expr_attributes)]
 #![feature(duration_constructors_lite)]
+#![feature(path_add_extension)]
 
 use std::{
     io,
@@ -37,6 +38,7 @@ use tracing_subscriber::{
     fmt::time,
     prelude::*,
 };
+use utils::file::exists;
 
 mod package;
 mod server;
@@ -47,9 +49,6 @@ static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    log();
-    trace!("Initialized logging");
-
     init();
     let cmd = Command::parse();
     trace!("Parsed command: {cmd:#?}");
@@ -88,22 +87,20 @@ fn log() {
         .init();
 
     if LOG_GUARD.set(guard).is_err() {
-        error!("[UNREACHABLE] log() was called more than once");
+        error!("The log() function was called more than once.");
+        error!("Please report this as a bug.");
     }
 }
 
 fn init() {
+    log();
     trace!("Initializing...");
     check_health();
 }
 
-#[inline]
-fn exists(program: &str) -> bool { which::which(program).is_ok() }
-
 fn check_health() {
     trace!("Checking health");
-    // Git is also strongly recommended, but is technically unneeded for most functionality,
-    // assuming packages don't rely on it.
+    // Git is also strongly recommended, but is technically unneeded for most functionality.
     let programs = &[
         "zstd", "tar", "bash", "chroot", "env", "grep", "cp", "touch", "tee", "sed", "mkdir",
     ];
