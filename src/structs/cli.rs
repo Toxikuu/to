@@ -3,6 +3,8 @@
 // TODO: Consider splitting this up into multiple files, or maybe moving function-specific bits to
 // their respective files under package/
 
+use std::time::SystemTime;
+
 use anyhow::{
     Context,
     Result,
@@ -28,7 +30,12 @@ use crate::{
     package::{
         Package,
         all_package_names,
-        pull::multipull,
+        pull::{
+            create_client,
+            get_local_modtime,
+            get_upstream_modtime,
+            multipull,
+        },
     },
     server,
     utils::file::exists,
@@ -192,6 +199,9 @@ pub struct ServeArgs {}
 pub struct PushArgs {
     #[arg(value_name = "PACKAGE", num_args=0..)]
     pub packages: Vec<String>,
+
+    #[arg(long, short)]
+    pub force: bool,
 }
 
 #[derive(Debug, Args)]
@@ -317,16 +327,35 @@ impl CommandHandler {
     async fn handle_push(&self, args: &PushArgs) -> Result<()> {
         let pkgs = none_to_all!(args);
 
+        let client = create_client().await?;
         for pkg_str in &pkgs {
             let pkg = form_package_or_continue!(pkg_str);
             let dist = pkg.distfile();
             let distfile = dist.display();
             let filename = dist.file_name().unwrap().display();
             let addr = &CONFIG.server_address;
-            if exec!("curl --data-binary '@{distfile}' '{addr}/up/{filename}'").is_err() {
+            let url = format!("http://{addr}/{filename}");
+
+            let resp = client
+                .get(&url)
+                .send()
+                .await
+                .with_context(|| format!("Failed to get a response from {url}"))?;
+
+            let local_modtime = get_local_modtime(&dist).unwrap_or_else(SystemTime::now);
+            let server_modtime =
+                get_upstream_modtime(resp.headers()).unwrap_or(SystemTime::UNIX_EPOCH);
+
+            let should_push = local_modtime > server_modtime;
+
+            // Compare local modtime with server and only push if local is newer
+            if (args.force || should_push)
+                && exec!("curl --data-binary '@{distfile}' '{addr}/up/{filename}'").is_err()
+            {
                 error!("Failed to push {distfile} for {pkg} with curl")
             }
         }
+
         Ok(())
     }
 

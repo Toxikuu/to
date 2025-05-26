@@ -59,7 +59,12 @@ pub async fn download(Apath(filename): Apath<String>) -> impl IntoResponse {
 
             // Add last modified header
             if let Ok(modtime) = generate_last_modified_header(&path).await {
-                headers.insert("Last-Modified", modtime);
+                headers.insert(header::LAST_MODIFIED, modtime);
+            } else {
+                error!(
+                    "Failed to generate last modified header for {}",
+                    path.display()
+                );
             }
 
             // Add content disposition header
@@ -69,6 +74,8 @@ pub async fn download(Apath(filename): Apath<String>) -> impl IntoResponse {
                     .parse()
                     .unwrap(),
             );
+
+            dbg!(&headers);
 
             (headers, body).into_response()
         },

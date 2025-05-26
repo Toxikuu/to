@@ -8,18 +8,18 @@ use std::{
     },
     io::Write,
     path::Path,
-    time::Duration,
+    time::{
+        Duration,
+        SystemTime,
+    },
 };
 
-use anyhow::{
-    Context,
-    Result,
-    bail,
-};
+use anyhow::Context;
 use fshelpers::mkdir_p;
 use futures::{
     StreamExt,
     future::join_all,
+    io,
 };
 use indicatif::{
     MultiProgress,
@@ -31,10 +31,12 @@ use reqwest::{
     Client,
     header::{
         HeaderMap,
+        LAST_MODIFIED,
         USER_AGENT,
     },
     redirect::Policy,
 };
+use thiserror::Error;
 use tokio::task;
 use tracing::{
     debug,
@@ -45,7 +47,7 @@ use tracing::{
 use super::Package;
 use crate::structs::config::CONFIG;
 
-pub async fn multipull(pkgs: &[Package]) -> Result<()> {
+pub async fn multipull(pkgs: &[Package]) -> anyhow::Result<()> {
     let addr = &CONFIG.server_address;
     let (client, m, sty) = setup().await?;
     let mut tasks = Vec::new();
@@ -76,7 +78,7 @@ pub async fn multipull(pkgs: &[Package]) -> Result<()> {
         let task = task::spawn(async move {
             match download_file(client, &url, &distfile, pb.clone())
                 .await
-                .permit(|e| e.to_string() == "extant")
+                .permit(|e| matches!(e, DownloadError::Extant))
             {
                 | Ok(()) => pb.set_prefix("\x1b[37;1m[\x1b[32m*\x1b[37m]\x1b[0m"),
                 | Err(e) => {
@@ -92,6 +94,37 @@ pub async fn multipull(pkgs: &[Package]) -> Result<()> {
     Ok(())
 }
 
+pub fn get_upstream_modtime(headers: &HeaderMap) -> Option<SystemTime> {
+    let h = headers.get(LAST_MODIFIED)?;
+    let s = h.to_str().ok()?;
+    let t = httpdate::parse_http_date(s).ok()?;
+    Some(t)
+}
+
+pub fn get_local_modtime(path: &Path) -> Option<SystemTime> {
+    let m = path.metadata().ok()?;
+    let t = m.modified().ok()?;
+    Some(t)
+}
+
+#[derive(Debug, Error)]
+pub enum DownloadError {
+    #[error("File exists and is current")]
+    Extant,
+
+    #[error("Reqwest error: {0}")]
+    Reqwest(#[from] reqwest::Error),
+
+    #[error("Couldn't create client: {0}")]
+    CreateClient(reqwest::Error),
+
+    #[error("I/O error: {0}")]
+    Io(#[from] io::Error),
+
+    #[error("Failed to get server modtime")]
+    GetServerModtime,
+}
+
 /// # Download a file
 ///
 /// This function takes a url and filename. The filename can be a path.
@@ -101,7 +134,12 @@ pub async fn multipull(pkgs: &[Package]) -> Result<()> {
 ///
 /// It also writes to a part file before moving to the destination on completion. Note that
 /// downloads cannot be resumed because that shit hurts my head.
-async fn download_file<P>(client: Client, url: &str, filename: P, pb: ProgressBar) -> Result<()>
+async fn download_file<P>(
+    client: Client,
+    url: &str,
+    filename: P,
+    pb: ProgressBar,
+) -> Result<(), DownloadError>
 where
     P: AsRef<Path>,
 {
@@ -112,24 +150,29 @@ where
     // it'll be manually updated
     pb.disable_steady_tick();
 
-    // skip extant files
-    if filename.exists() {
-        let file_size = filename.metadata().map(|f| f.len()).unwrap_or(0);
-        pb.set_length(file_size);
-        pb.set_position(file_size);
-        pb.finish();
-        pb.tick();
-        debug!("Skipping download for extant file {filename_display}");
-        bail!("extant");
-    }
-
     // fetch the url
     debug!("Fetching url '{url}'");
-    let resp = client
-        .get(url)
-        .send()
-        .await
-        .with_context(|| format!("Failed to get a response from {url}"))?;
+    let resp = client.get(url).send().await?;
+    let headers = resp.headers();
+
+    let server_modtime = match get_upstream_modtime(headers) {
+        | Some(t) => t,
+        | None => {
+            error!("Failed to get server modtime for {}", filename.display());
+            return Err(DownloadError::GetServerModtime);
+        },
+    };
+
+    // skip extant files if they're current or newer
+    if filename.exists()
+        && let Some(local_modtime) = get_local_modtime(filename)
+        && server_modtime <= local_modtime
+    {
+        debug!("Skipping download for extant file '{filename_display}'");
+        return Err(DownloadError::Extant)
+    }
+
+    // get content length
     let content_length = resp.content_length();
     debug_assert!(content_length.map(|l| l > 0).unwrap_or(true));
     debug!("Content length reported as {content_length:?}");
@@ -159,8 +202,13 @@ where
         pb.tick();
     }
 
-    // move the part file to the final destination
+    // move the part file to the final destination and properly set its modtime
     rename(partfile_, filename)?;
+    filetime::set_file_mtime(
+        filename,
+        filetime::FileTime::from_system_time(server_modtime),
+    )?;
+
     pb.finish();
     pb.tick();
     debug!("Downloaded '{url}' to '{filename_display}'");
@@ -174,7 +222,7 @@ where
 /// It sets a user agent of "to/0.0.0"
 /// It timeouts after 32 seconds
 /// It ignores invalid http1 headers
-async fn create_client() -> std::result::Result<Client, reqwest::Error> {
+pub async fn create_client() -> Result<Client, reqwest::Error> {
     let client = Client::builder()
         .redirect(Policy::limited(16))
         .http1_ignore_invalid_headers_in_responses(true)
@@ -183,7 +231,7 @@ async fn create_client() -> std::result::Result<Client, reqwest::Error> {
             headers.insert(USER_AGENT, "to/0.1.0".parse().unwrap());
             headers
         })
-        .timeout(Duration::from_secs(32))
+        .connect_timeout(Duration::from_secs(32))
         .build();
     if client.is_err() {
         error!("Failed to build http client");
@@ -193,8 +241,8 @@ async fn create_client() -> std::result::Result<Client, reqwest::Error> {
 }
 
 /// # Initial setup for the client and progress bar
-pub async fn setup() -> Result<(Client, MultiProgress, ProgressStyle)> {
-    let client = create_client().await.context("Failed to create client")?;
+pub async fn setup() -> Result<(Client, MultiProgress, ProgressStyle), DownloadError> {
+    let client = create_client().await.map_err(DownloadError::CreateClient)?;
     let m = MultiProgress::new();
     let sty = ProgressStyle::with_template(
         "{prefix} {msg:<36} [{bar:18.red/black}] {decimal_total_bytes}",
