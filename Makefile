@@ -2,6 +2,9 @@
 
 # TODO: Make the configure flags actually do stuff
 
+GIT_BRANCH ?= master
+GIT_REPO   ?= https://github.com/Toxikuu/to-pkgs.git
+
 all: build
 
 build:
@@ -33,14 +36,17 @@ ifeq ($(ENABLE_CONF),1)
 	install -Dm644 $(wildcard etc/*)           -t $(DESTDIR)/etc/to/
 endif
 
-	# TODO: Add completions
+# TODO: Add completions
 ifeq ($(ENABLE_COMP),1)
 	install -Dm644 completions/bash               $(DESTDIR)/usr/share/bash-completion/completions/to
 	install -Dm644 completions/zsh                $(DESTDIR)/usr/share/zsh/site-functions/_to
 	install -Dm644 completions/fish               $(DESTDIR)/usr/share/fish/vendor_completions.d/to.fish
 endif
 
-	# TODO: Install docs once I write some
+# TODO: Install docs once I write some
+ifeq ($(ENABLE_DOCS),1)
+	echo "SOON"
+endif
 
 ifeq ($(ENABLE_TOOLS),1)
 	install -dm755                                $(DESTDIR)/var/lib/to/chroot
@@ -52,12 +58,15 @@ endif
 	install -dm755                                $(DESTDIR)/var/cache/to/data
 	install -dm755                                $(DESTDIR)/var/cache/to/dist
 
+# TODO: Drop support for this and just use `to sync`, or use variables
 ifeq ($(ENABLE_GIT),1)
+	$(info GIT_REPO = $(GIT_REPO))
+	$(info GIT_BRANCH = $(GIT_BRANCH))
 	@if [ -d "$(DESTDIR)/var/db/to/pkgs/.git" ]; then \
 		echo "Package repo exists, skipping clone."; \
 	else \
 		echo "Cloning package repo..."; \
-		git clone --depth=1 --single-branch --branch master https://github.com/Toxikuu/to-pkgs.git $(DESTDIR)/var/db/to/pkgs; \
+		git clone --depth=1 --no-single-branch --branch $(GIT_BRANCH) $(GIT_REPO) $(DESTDIR)/var/db/to/pkgs; \
 	fi
 endif
 

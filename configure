@@ -13,6 +13,8 @@ enable_tools=1
 
 show_help() {
     cat <<EOF
+WARNING: Most of the configure options do fuck all at the moment.
+
 Usage: ./configure [OPTIONS]
 
 Options:
