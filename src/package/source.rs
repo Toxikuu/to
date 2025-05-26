@@ -180,7 +180,7 @@ impl Package {
                     if path.exists() {
                         exec!("cd '{path_str}' && git pull")?;
                     } else {
-                        exec!("git clone --depth=256 '{url}' '{path_str}'")?;
+                        exec!("git clone --depth=1 '{url}' '{path_str}'")?;
                     }
                 },
 
