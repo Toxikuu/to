@@ -61,24 +61,38 @@ WORKING ON IT. SOON I PROMISE.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
+- [x] Don't install runtime dependencies to the build environment.
+    - [x] There needs to be some way to check whether a package is being
+    installed in the build environment. Use the existence of /D.
+- [x] Set the LAST_MODIFIED header with `fmt_http_date()` from `httpdate`
+- [ ] Track package install size, probably using `sighs` and `size`
+    - [ ] Distfile size should be trivial, but installed size will require some
+    work. It should probably be written as metadata to the sfile.
 - [x] Make `to edit` not rely on the stale s file
     - Fixed by running `to lint` after `to generate`
 - [ ] Drop the 2 pkg-add template once I've transferred all the packages I want
 - [x] Stop using /var/cache for everything. lol.
 - [x] Add zstd to LFStage
 - [x] Use the pardl poc instead of curl for pull
+- [ ] Add `to data`
+    - [ ] Should display data about `to`, including the number of installed
+    packages, the total number of packages, the health (with a flag), the number
+    of outdated packages, the number of commit-versioned packages
 - [ ] Improve `to view`
     - [x] Add `--dependencies` and `--deep-dependencies`
+    - [ ] Add `--dependants`
     - [ ] Add `--distfiles` to show available distfiles for a package
     - [ ] Add `--outdated` to show only outdated packages
     - [ ] Add `--installed` to show only installed (and outdated) packages
     - [ ] Add `--available` to show only available packages
+    - [ ] Add `--pkg` to cat the pkgfile
     - [ ] Add `--manifest` to display the manifest
         - [ ] Displaying the manifest will check the manifest in the distfile,
         since that one is complete and contains no exclusions, but fall back to
         the installed manifest if the distfile's manifest doesn't exist or
-        couldn't be accessed.
-        - [ ] Display whether each path in the manifest exists
+        couldn't be accessed. Consider dropping exclusions for simplicity.
+        - [ ] If I drop exclusions, it should prefer the system manifest, and
+        fall back to the tarball one, since the system would be faster.
     - [x] Adjust the format for outdated packages to be 'name@iv -> v'
 - [ ] Write an explanation of how `to` works
     - [ ] Also write documentation (eventually)
@@ -115,7 +129,8 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
     removals, etc.)
 - [x] Drop c_c in base.env because it's very flaky
     - [ ] Fix associated build failures
-- [ ] Record configure options to /var/db/to/data/$n/cfg. This would be done by
-  packaging /_cfg_opts into the tarball, similar to MANIFEST.
-- [ ] Provide an official stage2.5ish. Ensure the presence of zstd. Also
-  automatically install `to` to it.
+<!-- - [ ] Record configure options to /var/db/to/data/$n/cfg. This would be done by -->
+<!--   packaging /_cfg into the tarball, similar to MANIFEST. -->
+- [ ] Provide an official stage file. Ensure the presence of `zstd`. Also
+  automatically install `to` to it. This stage file should be provided as a
+  release asset.
