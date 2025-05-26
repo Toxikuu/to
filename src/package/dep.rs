@@ -23,13 +23,13 @@ pub fn parse_deps(raw: &str) -> Vec<Dep> {
     us_array(raw).iter().map(|s| Dep::from_string(s)).collect()
 }
 
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone)]
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Hash)]
 pub struct Dep {
     pub name: String,
     pub kind: DepKind,
 }
 
-#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq, Clone, Copy, Hash)]
 // NOTE: Doc dependency support has been dropped as I'd rather just include them as make
 // dependencies for the packages for which I want documentation.
 pub enum DepKind {
@@ -82,22 +82,20 @@ impl Package {
     #[instrument(level = "trace")]
     fn deep_deps(
         &self,
-        resolved: &mut HashSet<String>,
-        seen: &mut HashSet<String>,
+        resolved: &mut HashSet<Dep>,
+        seen: &mut HashSet<Package>,
         order: &mut Vec<Package>,
     ) {
         for dep in &self.dependencies {
-            // PERF: I'm like 99% sure !resolved.contains is redundant
-            if !resolved.contains(&dep.name) {
-                resolved.insert(dep.name.clone());
-
+            if resolved.insert(dep.clone()) {
                 dep.to_package()
                     .expect("Failed to form dependency package")
                     .deep_deps(resolved, seen, order);
             }
         }
 
-        if seen.insert(self.to_string().clone()) {
+        // Avoid resolving dependencies for packages we've already resolved
+        if seen.insert(self.clone()) {
             order.push(self.clone());
         }
     }
@@ -109,18 +107,14 @@ impl Package {
         let mut order = Vec::new();
         self.deep_deps(&mut resolved, &mut seen, &mut order);
 
-        let deps = order
-            .iter()
-            .filter(|d| d.name != self.name)
-            .cloned()
-            .collect::<Vec<_>>();
+        order.retain(|d| d.name != self.name);
 
         trace!("Resolved dependencies for {self:-}:");
-        for dep in &deps {
+        for dep in &order {
             trace!(" - {dep} ({})", dep.depkind.unwrap());
         }
 
-        deps
+        order
     }
 
     /// # Installs dependencies for a package
@@ -166,4 +160,68 @@ impl Package {
 
 impl fmt::Display for Dep {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{}", self.name) }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::package::{
+        Package,
+        dep::DepKind,
+    };
+
+    #[test]
+    /// Confirm make-ca isn't a dependency of itself, as it sometimes wants to be.
+    fn make_ca_runtime_of_self() {
+        let pkg = Package::from_s_file("make-ca").unwrap();
+
+        let all_deps = pkg.resolve_deps();
+        dbg!(&all_deps);
+
+        assert!(all_deps.iter().all(|d| d.name != "make-ca"))
+    }
+
+    #[test]
+    /// Since make-ca is both a runtime and a required dependency, some weird shit used to happen.
+    /// Test to ensure that weird shit doesn't happen.
+    ///
+    /// By weird shit, I mean the dependency resolver used to only hash dependencies by name, not
+    /// also by kind. This should be fixed now.
+    fn rust_make_ca_dep() {
+        let pkg = Package::from_s_file("rust").unwrap();
+
+        let all_deps = pkg.resolve_deps();
+        eprintln!("Deps:");
+        for dep in &all_deps {
+            eprintln!("{:>16} ({})", dep.name, dep.depkind.unwrap())
+        }
+
+        assert!(
+            all_deps
+                .iter()
+                .filter(|d| d.name == "make-ca")
+                .collect::<Vec<_>>()
+                .len()
+                > 1
+        );
+
+        assert!(
+            all_deps
+                .iter()
+                .any(|d| d.name == "make-ca" && d.depkind.unwrap() == DepKind::Required)
+        );
+
+        assert!(
+            all_deps
+                .iter()
+                .any(|d| d.name == "make-ca" && d.depkind.unwrap() == DepKind::Runtime)
+        );
+
+        let deps = all_deps
+            .into_iter()
+            .filter(|d| d.depkind.expect("Dep should have a kind") != DepKind::Runtime)
+            .collect::<Vec<_>>();
+
+        assert!(deps.iter().any(|d| d.name == "make-ca"));
+        assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Required));
+    }
 }

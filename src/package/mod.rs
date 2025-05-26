@@ -98,7 +98,7 @@ use crate::{
 ///   of a package. These are formatted as `option = y/m` or `option_suboption = n`. In other words,
 ///   the `CONFIG_` prefix may be elided, and the yes-module-no tristate can be expressed by the first
 ///   character of those states, delimited by a '/'. For instance, `y/m` means yes or module.
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Package {
     pub name:       String,
     pub version:    String,

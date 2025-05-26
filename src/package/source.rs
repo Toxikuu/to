@@ -64,6 +64,7 @@ pub fn parse_sources(raw: &str) -> Vec<Source> {
 ///
 /// - Pkg (guess dest): "linux" # to reuse the linux kernel sources
 /// - Pkg (explicit dest): "linux -> kernel-src"
+#[derive(PartialEq, Eq, Hash)]
 pub struct Source {
     pub kind: SourceKind,
     pub url:  String, // dl from pardl (ex: https://link.com/tarball.tar.gz -> tb.tar.gz)
@@ -153,7 +154,7 @@ impl Source {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Hash, Eq)]
 pub enum SourceKind {
     Download,
     Git,
