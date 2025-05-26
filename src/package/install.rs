@@ -1,12 +1,16 @@
 // package/install.rs
 
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    path::Path,
+};
 
 use anyhow::{
     Context,
     Result,
     bail,
 };
+use once_cell::sync::Lazy;
 use permitit::Permit;
 use tracing::{
     debug,
@@ -21,6 +25,15 @@ use crate::{
     exec,
     package::message::MessageHook,
 };
+
+/// # Check whether we're in the build chroot
+///
+/// This checks whether `to` is being run from the build chroot by checking for the existence of
+/// /D. This function is memoized.
+pub fn in_build_environment() -> bool {
+    static IN_BUILD_ENV: Lazy<bool> = Lazy::new(|| Path::new("/D").exists());
+    *IN_BUILD_ENV
+}
 
 impl Package {
     /// Core logic of `install()`, split into a separate function to take the visited hashmap
@@ -43,18 +56,19 @@ impl Package {
         // Issue a warning that the latest version of a package is already installed if the package
         // is up-to-date, installed, and --force is not passed.
         if !updating && self.is_installed() && !force {
-            debug!("Already installed {self}");
+            debug!("Already installed {self:-}");
             bail!("Already installed")
         }
 
         if !dist.exists() {
-            error!("Missing distfile for {self}");
+            error!("Missing distfile for {self:-}");
             bail!("Missing distfile");
         }
 
-        self.install_deps(force, visited)
+        // Only install runtime dependencies if we aren't in the build environment
+        self.install_deps(force, !in_build_environment(), visited)
             .permit(|e| e.to_string() == "Already installed")
-            .with_context(|| format!("Failed to install dependencies for {self}"))?;
+            .with_context(|| format!("Failed to install dependencies for {self:-}"))?;
 
         let data = &self.datadir();
         let iv = data.join("IV");
@@ -93,15 +107,15 @@ impl Package {
 
         "#
         )
-        .with_context(|| format!("Failed to install {self}"))?;
+        .with_context(|| format!("Failed to install {self:-}"))?;
 
-        info!("Installed {self}");
+        info!("Installed {self:-}");
 
         // Do some other stuff if updating
         if updating {
             // TODO: Consider adding update hooks (but wait until needed)
             if let Err(e) = self.remove_dead_files_after_update() {
-                warn!("Failed to remove dead files for {self}: {e}")
+                warn!("Failed to remove dead files for {self:-}: {e}")
             } else {
                 info!(
                     "Removed dead files for {}@{}",
@@ -120,7 +134,7 @@ impl Package {
 
     /// Install a package
     /// Calls `install_deps()` under the hood
-    #[instrument]
+    #[instrument(skip(self, force))]
     pub fn install(&self, force: bool) -> Result<()> {
         let mut visited = HashSet::new();
         self.install_inner(force, &mut visited)

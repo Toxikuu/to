@@ -22,6 +22,7 @@ use anyhow::{
     Context,
     Result,
 };
+use dep::DepKind;
 use serde::{
     Deserialize,
     Serialize,
@@ -112,6 +113,9 @@ pub struct Package {
     pub sources:      Vec<Source>,
     pub dependencies: Vec<Dep>,
     pub kcfg:         Vec<String>,
+
+    #[serde(skip)]
+    pub depkind: Option<DepKind>,
 }
 
 impl Package {
@@ -147,8 +151,11 @@ impl Package {
             sources: parse_sources(s),
             dependencies: parse_deps(d),
             kcfg,
+            depkind: None,
         }
     }
+
+    pub fn is_dependency(&self) -> bool { self.depkind.is_some() }
 
     // TODO: Use thiserror
     #[instrument(level = "debug")]

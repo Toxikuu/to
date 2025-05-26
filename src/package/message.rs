@@ -170,16 +170,30 @@ impl Message {
     }
 
     pub fn display(&self) {
-        // TODO: Add formatting for code snippets, etc.
-        println!("\x1b[3m{}\x1b[0m", self.title);
-        println!("\x1b[36m{}\x1b[0m", self.content);
+        println!("\x1b[3m -=- {} -=- \x1b[0m", self.title);
+        println!("\x1b[36m{}\x1b[0m", format_message_content(&self.content));
     }
 
     pub fn display_with_hook(&self) {
-        // TODO: Add formatting for code snippets, etc.
-        println!("\x1b[3m{} \x1b[34m({})\x1b[0m", self.title, self.hook);
-        println!("\x1b[36m{}\x1b[0m", self.content);
+        println!(
+            "\x1b[3m -=- {} -=- \x1b[34m({})\x1b[0m",
+            self.title, self.hook
+        );
+        println!("\x1b[36m{}\x1b[0m", format_message_content(&self.content));
     }
+}
+
+fn format_message_content(content: &str) -> String {
+    content
+        .lines()
+        .map(|l| {
+            if l.starts_with(" $ ") {
+                format!("\x1b[36;1m{l}\x1b[0m\n")
+            } else {
+                format!("{l}\n")
+            }
+        })
+        .collect::<String>()
 }
 
 impl Package {
@@ -192,19 +206,19 @@ impl Package {
     fn collect_messages(&self) -> Vec<Message> {
         let messagedir = &self.messagedir();
         trace!(
-            "Collecting messages from {} for {self}",
+            "Collecting messages from {} for {self:-}",
             messagedir.display()
         );
         if !messagedir.is_dir() {
             // TODO: If I ever wanna be really thorough, I might should log the case where
             // messagedir exists but isn't a dir.
-            trace!("No messages exist for {self}");
+            trace!("No messages exist for {self:-}");
             return vec![];
         }
 
         let Ok(entries) = messagedir
             .read_dir()
-            .inspect_err(|e| error!("Failed to get messages for {self}: {e}"))
+            .inspect_err(|e| error!("Failed to get messages for {self:-}: {e}"))
         else {
             return vec![];
         };

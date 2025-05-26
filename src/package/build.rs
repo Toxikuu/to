@@ -31,6 +31,7 @@ use super::Package;
 use crate::{
     CONFIG,
     exec,
+    package::dep::DepKind,
 };
 
 // TODO: Make stagefile configurable
@@ -73,8 +74,8 @@ impl Package {
     fn populate_overlay(&self) -> Result<()> {
         let name = &self.name;
         info!("Populating overlay for {name}");
-        // TODO: Copy files from /usr/share/to/copied to $CHROOT/
-        // Use sane defaults in copied/
+        // TODO: Consider dropping `/etc/to/exclude` support
+        // - Not sure if I wanna do this because I already wrote and used `il()` :shrug:
         exec!(
             r#"
             cd {MERGED}
@@ -116,47 +117,55 @@ impl Package {
             if source_path.is_dir() {
                 dircpy::copy_dir(&source_path, &source_dest).with_context(|| {
                     format!(
-                        "Failed to (recursively) copy {source:?} from {source_path:?} to {source_dest:?} for {self}"
+                        "Failed to (recursively) copy {source:?} from {source_path:?} to {source_dest:?} for {self:-}"
                     )
                 })?;
             } else {
                 copy(&source_path, &source_dest).with_context(|| {
                     format!(
-                        "Failed to copy {source:?} from {source_path:?} to {source_dest:?} for {self}"
+                        "Failed to copy {source:?} from {source_path:?} to {source_dest:?} for {self:-}"
                     )
                 })?;
             }
         }
 
-        #[rustfmt::skip]
-        for dep in self.resolve_deps() {
-            copy_to_chroot(dep.distfile())
-                .with_context(|| format!("Missing distfile for {dep:?}"))?;
-            copy_to_chroot(dep.pkgfile())
-                .with_context(|| format!("Missing pkgfile for {dep:?}"))?;
-            copy_to_chroot(dep.sfile())
-                .with_context(|| format!("Missing sfile for {dep:?}"))?;
+        // Resolve all non-runtime dependencies to be copied to the build environment
+        let deps = self
+            .resolve_deps()
+            .into_iter()
+            .filter(|d| d.depkind.expect("Dep should have a kind") != DepKind::Runtime)
+            .collect::<Vec<_>>();
 
-            trace!("Copied over dependency {dep:?}")
+        #[rustfmt::skip]
+        // TODO: Copy aliases as well
+        for dep in &deps {
+            copy_to_chroot(dep.distfile())
+                .with_context(|| format!("Missing distfile for {dep:-}"))?;
+            copy_to_chroot(dep.pkgfile())
+                .with_context(|| format!("Missing pkgfile for {dep:-}"))?;
+            copy_to_chroot(dep.sfile())
+                .with_context(|| format!("Missing sfile for {dep:-}"))?;
+
+            trace!("Copied over dependency {dep:-}")
         }
 
         // Write chroot/deps
-        let deps = self
-            .resolve_deps()
+        let deps_str = deps
             .iter()
             .map(|p| p.name.clone())
             .intersperse(" ".to_string())
             .collect::<String>();
-        let deps = deps.trim();
+        let deps_str = deps_str.trim();
 
-        if deps.is_empty() {
-            debug!("Not writing deps file since {self} has no dependencies");
+        if deps_str.is_empty() {
+            debug!("Not writing deps file since {self:-} has no dependencies");
         } else {
             let deps_file = format!("{MERGED}/deps");
-            write(deps_file, deps).context("Failed to write deps file")?;
+            write(deps_file, deps_str).context("Failed to write deps file")?;
             debug!("Wrote deps file for {self}");
-            trace!("Deps: {deps}");
+            trace!("Deps_str: {deps_str}");
         }
+
         Ok(())
     }
 
@@ -206,9 +215,11 @@ impl Package {
     }
 
     fn save_distfile(&self) -> Result<()> {
-        let dist = self.distfile();
         mkdir_p(self.distdir())?;
-        exec!("cp -vf '/var/lib/to/chroot/upper/pkg.tar.zst' {dist:?}")?;
+        exec!(
+            "cp -vf '/var/lib/to/chroot/upper/pkg.tar.zst' '{}'",
+            self.distfile().display()
+        )?;
         info!("Saved distfile for {self}");
         Ok(())
     }
@@ -314,4 +325,29 @@ fn clean_overlay() -> Result<()> {
     .context("Failed to clean overlay")?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::package::{
+        Package,
+        dep::DepKind,
+    };
+
+    #[test]
+    fn depression() {
+        // The xorg-server package is chosen since it has all sorts of dependencies
+        let deps = Package::from_s_file("xorg-server").unwrap().resolve_deps();
+
+        // Ensure dependency information is maintained
+        assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Required));
+        assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Runtime));
+        assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Build));
+
+        // Ensure all dependency packages have `depkind` and confirm `is_dependency()` works
+        assert!(deps.iter().all(|d| d.is_dependency()));
+
+        // Print out all dependency information
+        eprintln!("{:#?}", &deps);
+    }
 }
