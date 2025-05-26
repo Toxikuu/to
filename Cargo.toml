@@ -18,6 +18,7 @@ anyhow = "1"
 axum = { version = "0.8", features = ["multipart"] }
 clap = { version = "4.5", features = ["derive"] }
 dircpy = "0.3"
+filetime = "0.2.25"
 fshelpers = { git = "https://github.com/toxikuu/fshelpers.git" }
 futures = "0.3"
 httpdate = "1.0.3"
