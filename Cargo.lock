@@ -1026,9 +1026,9 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 
 [[package]]
 name = "permitit"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee1c98dd8a9cf865af19ac9e1ee48967d97b25a1d728f1ecdd71a7ce59685816"
+checksum = "dcc0dfdd1855b126072d1f682ae14c7febaa3a4e84d2cd27dbe49437c261ee91"
 
 [[package]]
 name = "pin-project-lite"
@@ -1132,7 +1132,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1690,6 +1690,7 @@ dependencies = [
  "dircpy",
  "fshelpers",
  "futures",
+ "httpdate",
  "indicatif",
  "mime_guess",
  "num_cpus",
