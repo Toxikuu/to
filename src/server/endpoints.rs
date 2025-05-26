@@ -1,12 +1,22 @@
 // server/endpoints.rs
 
-use std::path::PathBuf;
+use std::{
+    io::{
+        self,
+        ErrorKind,
+    },
+    path::{
+        Path,
+        PathBuf,
+    },
+};
 
 use axum::{
     body::Body,
-    extract::Path,
+    extract::Path as Apath,
     http::{
         HeaderMap,
+        HeaderValue,
         StatusCode,
         header,
     },
@@ -26,7 +36,7 @@ use tracing::{
 
 const DIST: &str = "/srv/to/dist";
 
-pub async fn download(Path(filename): Path<String>) -> impl IntoResponse {
+pub async fn download(Apath(filename): Apath<String>) -> impl IntoResponse {
     let path = PathBuf::from(DIST).join(&filename);
 
     match File::open(&path).await {
@@ -47,6 +57,11 @@ pub async fn download(Path(filename): Path<String>) -> impl IntoResponse {
                 );
             }
 
+            // Add last modified header
+            if let Ok(modtime) = generate_last_modified_header(&path).await {
+                headers.insert("Last-Modified", modtime);
+            }
+
             // Add content disposition header
             headers.insert(
                 header::CONTENT_DISPOSITION,
@@ -64,7 +79,7 @@ pub async fn download(Path(filename): Path<String>) -> impl IntoResponse {
     }
 }
 
-pub async fn upload(Path(filename): Path<String>, body: Body) -> impl IntoResponse {
+pub async fn upload(Apath(filename): Apath<String>, body: Body) -> impl IntoResponse {
     let path = PathBuf::from(DIST).join(&filename);
     let mut file = match File::create(&path).await {
         | Ok(f) => f,
@@ -92,4 +107,11 @@ pub async fn upload(Path(filename): Path<String>, body: Body) -> impl IntoRespon
 
     debug!("Uploaded {filename}");
     StatusCode::OK
+}
+
+async fn generate_last_modified_header<P: AsRef<Path>>(path: P) -> Result<HeaderValue, io::Error> {
+    let metadata = tokio::fs::metadata(path.as_ref()).await?;
+    let modtime = metadata.modified()?;
+    let datetime = httpdate::fmt_http_date(modtime);
+    Ok(datetime.parse().map_err(|_| ErrorKind::InvalidData)?)
 }
