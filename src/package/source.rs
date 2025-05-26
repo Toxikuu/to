@@ -178,7 +178,7 @@ impl Package {
             match source.kind {
                 | SourceKind::Git => {
                     if path.exists() {
-                        exec!("cd '{path_str}' && git pull")?;
+                        exec!("cd '{path_str}' && git pull --depth=1")?;
                     } else {
                         exec!("git clone --depth=1 '{url}' '{path_str}'")?;
                     }
