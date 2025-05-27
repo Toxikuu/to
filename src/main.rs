@@ -50,7 +50,7 @@ static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 async fn main() -> Result<()> {
     init();
     let cmd = Command::parse();
-    trace!("Parsed command: {cmd:#?}");
+    trace!("Parsed {cmd:#?}");
 
     CommandHandler::new(cmd.cmd)
         .handle()
@@ -95,9 +95,10 @@ fn log() {
 fn init() {
     log();
     trace!("Initializing...");
-    check_health();
+    check_health(); // TODO: Run this once per boot
 }
 
+// TODO: Make this modular, split into maintainer and user dependencies
 fn check_health() {
     trace!("Checking health");
     // Git is also strongly recommended, but is technically unneeded for most functionality.
