@@ -12,6 +12,7 @@ use serde::{
     Serialize,
 };
 use tracing::{
+    debug,
     instrument,
     trace,
 };
@@ -49,7 +50,6 @@ impl fmt::Display for DepKind {
 }
 
 impl Dep {
-    #[instrument(level = "debug")]
     pub fn from_string(str: &str) -> Self {
         if let Some((kind, str)) = str.split_once(',') {
             let kind = match kind {
@@ -79,7 +79,7 @@ impl Dep {
 }
 
 impl Package {
-    #[instrument(level = "trace")]
+    #[instrument(skip(self, resolved, seen, order), level = "trace")]
     fn deep_deps(
         &self,
         resolved: &mut HashSet<Dep>,
@@ -100,8 +100,9 @@ impl Package {
         }
     }
 
-    #[instrument(level = "debug")]
+    #[instrument(skip(self), level = "debug")]
     pub fn resolve_deps(&self) -> Vec<Package> {
+        debug!("Resolving dependencies for {self:-}");
         let mut resolved = HashSet::new();
         let mut seen = HashSet::new();
         let mut order = Vec::new();
