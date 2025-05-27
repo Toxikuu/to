@@ -1,6 +1,7 @@
 // package/build.rs
 
 use std::{
+    collections::HashSet,
     fs::{
         copy,
         read_dir,
@@ -129,12 +130,26 @@ impl Package {
             }
         }
 
-        // Resolve all non-runtime dependencies to be copied to the build environment
-        let deps = self
-            .resolve_deps()
-            .into_iter()
-            .filter(|d| d.depkind.expect("Dep should have a kind") != DepKind::Runtime)
-            .collect::<Vec<_>>();
+        // Resolve only needed dependencies
+        //
+        // The idea is to resolve the shallow build dependencies, so extraneous deep build
+        // dependencies aren't present in the chroot.
+        //
+        // We first find all the shallow build dependencies, then all required deep dependencies.
+        // Those are then copied to the build environment. We also use a HashSet for extra
+        // deduplication.
+        let mut deps = self
+            .dependencies
+            .iter()
+            .filter(|d| d.kind == DepKind::Build)
+            .map(|d| d.to_package().expect("Failed to form package for dep"))
+            .collect::<HashSet<_>>();
+
+        deps.extend(
+            self.resolve_deps()
+                .into_iter()
+                .filter(|d| d.depkind.expect("Dep should have a kind") == DepKind::Required),
+        );
 
         #[rustfmt::skip]
         // TODO: Copy aliases as well
