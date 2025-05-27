@@ -1,9 +1,12 @@
 // structs/cli.rs
 //! Defines clap commands
-// TODO: Consider splitting this up into multiple files, or maybe moving function-specific bits to
-// their respective files under package/
+// TODO: Split this up into multiple files, and move function-specific bits to their respective
+// files under package/
 
-use std::time::SystemTime;
+use std::{
+    process::exit,
+    time::SystemTime,
+};
 
 use anyhow::{
     Context,
@@ -47,6 +50,27 @@ const SCRIPT_DIR: &str = "/usr/share/to/scripts";
 pub struct Command {
     #[command(subcommand)]
     pub cmd: SubCommand,
+}
+
+#[derive(Debug, Args)]
+pub struct DataArgs {
+    #[arg(value_name = "PACKAGE", num_args = 1)]
+    pub packages: Vec<String>,
+
+    /// Print the upstream of a package
+    #[arg(long, short = 'U')]
+    pub upstream: bool,
+
+    /// Print the version of a package
+    #[arg(long, short = 'V')]
+    pub version: bool,
+
+    /// Print the installed version of a package
+    #[arg(long, short = 'I')]
+    pub installed_version: bool,
+
+    #[arg(long, short = 'i')]
+    pub is_installed: bool,
 }
 
 #[derive(Debug, Args)]
@@ -237,7 +261,10 @@ pub enum SubCommand {
     Alias(AliasArgs),
     /// Build a package
     Build(BuildArgs),
+    /// Display package data
+    Data(DataArgs),
     /// Lint a package's pkg file
+    ///
     /// This should be executed after the package is generated
     Lint(LintArgs),
     /// Fetch a package's upstream version
@@ -305,6 +332,7 @@ impl CommandHandler {
             | SubCommand::Delete(args) => self.handle_delete(args),
             | SubCommand::Bump(args) => self.handle_bump(args).await,
             | SubCommand::Build(args) => self.handle_build(args),
+            | SubCommand::Data(args) => self.handle_data(args),
             | SubCommand::Lint(args) => self.handle_lint(args),
             | SubCommand::Vf(args) => self.handle_vf(args).await,
             | SubCommand::Push(args) => self.handle_push(args).await,
@@ -514,6 +542,32 @@ impl CommandHandler {
         Ok(())
     }
 
+    fn handle_data(&self, args: &DataArgs) -> Result<()> {
+        let pkgs = none_to_all!(args);
+
+        for pkg_str in &pkgs {
+            let pkg = form_package_or_continue!(pkg_str);
+
+            if args.version {
+                println!("{}", pkg.version)
+            }
+
+            if args.installed_version {
+                println!("{}", pkg.installed_version().unwrap_or_default())
+            }
+
+            if args.upstream {
+                println!("{}", pkg.upstream.as_deref().unwrap_or_default())
+            }
+
+            if args.is_installed {
+                if pkg.is_installed() { exit(0) } else { exit(1) }
+            }
+        }
+
+        Ok(())
+    }
+
     fn handle_lint(&self, args: &LintArgs) -> Result<()> {
         let pkgs = none_to_all!(args);
 
@@ -521,7 +575,10 @@ impl CommandHandler {
             let pkg = form_package_or_continue!(pkg_str);
             match pkg.lint() {
                 | Ok(_) => info!("Lints passed for {pkg}"),
-                | Err(e) => warn!("Lints failed for {pkg}: {e}"),
+                | Err(e) => {
+                    warn!("Lints failed for {pkg}: {e}");
+                    exit(1)
+                },
             }
         }
         Ok(())
