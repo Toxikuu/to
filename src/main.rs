@@ -5,22 +5,13 @@
 
 use std::{
     io,
+    process::exit,
     str::FromStr,
     sync::OnceLock,
 };
 
-use anyhow::{
-    Context,
-    Result,
-};
 use clap::Parser;
-use structs::{
-    cli::{
-        Command,
-        CommandHandler,
-    },
-    config::CONFIG,
-};
+use config::CONFIG;
 use tracing::{
     Level,
     error,
@@ -39,25 +30,22 @@ use tracing_subscriber::{
 };
 use utils::file::exists;
 
+mod cli;
+mod config;
 mod package;
 mod server;
-mod structs;
 mod utils;
 
 static LOG_GUARD: OnceLock<WorkerGuard> = OnceLock::new();
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
     init();
-    let cmd = Command::parse();
-    trace!("Parsed {cmd:#?}");
-
-    CommandHandler::new(cmd.cmd)
-        .handle()
-        .await
-        .context("Command failed")?;
-
-    Ok(())
+    if let Err(e) = cli::Cli::parse().run().await {
+        error!("{e}");
+        // unravel!(e);
+        exit(1)
+    }
 }
 
 // TODO: Move the init stuff elsewhere

@@ -9,18 +9,18 @@ use std::{
     },
     fmt::Debug,
     fs::read_to_string,
+    io::{
+        self,
+        ErrorKind,
+    },
     path::{
         Path,
         PathBuf,
     },
 };
 
-use anyhow::{
-    Context,
-    Result,
-    bail,
-};
 use fshelpers::rm;
+use thiserror::Error;
 use tracing::{
     debug,
     error,
@@ -101,12 +101,11 @@ where
 
 /// # Reads manifests and returns a hashmap of their paths and their contents
 #[instrument]
-fn read_all_manifests(manifests: &[PathBuf]) -> Result<HashMap<PathBuf, Vec<String>>> {
+fn read_all_manifests(manifests: &[PathBuf]) -> Result<HashMap<PathBuf, Vec<String>>, io::Error> {
     let mut data = HashMap::new();
 
     for manifest in manifests {
-        let contents = read_to_string(manifest)
-            .with_context(|| format!("Failed to open manifest '{}'", manifest.display()))?;
+        let contents = read_to_string(manifest)?;
         let lines = contents.lines().map(ToString::to_string).collect();
         data.insert(manifest.clone(), lines);
     }
@@ -121,11 +120,13 @@ fn read_all_manifests(manifests: &[PathBuf]) -> Result<HashMap<PathBuf, Vec<Stri
 fn find_unique(
     all_data: &HashMap<PathBuf, Vec<String>>,
     this_manifest: &PathBuf,
-) -> Result<Vec<String>> {
+) -> Result<Vec<String>, io::Error> {
     debug!("Finding unique files for {this_manifest:?}");
 
     debug_assert!(all_data.contains_key(this_manifest));
-    let this_data = all_data.get(this_manifest).context("Missing manifest")?;
+    let this_data = all_data
+        .get(this_manifest)
+        .ok_or(io::Error::from(ErrorKind::NotFound))?;
     let all_other_lines = all_data
         .iter()
         .filter(|(path, _)| *path != this_manifest)
@@ -142,11 +143,26 @@ fn find_unique(
 
 /// # Finds paths unique to a manifest
 /// Also prefixes those paths with /
-pub fn find_unique_paths(manifest: &PathBuf) -> Result<Vec<String>> {
+pub fn find_unique_paths(manifest: &PathBuf) -> Result<Vec<String>, io::Error> {
     // Here a depth of 2 is used because the we are in the data directory for all packages
     let manifests = locate("/var/db/to/data", 2);
     let data = read_all_manifests(&manifests)?;
     find_unique(&data, manifest)
+}
+
+#[derive(Debug, Error)]
+pub enum RemoveError {
+    #[error("Package is not installed")]
+    NotInstalled,
+
+    #[error("Package is critical")]
+    Critical,
+
+    #[error("Package is core")]
+    Core,
+
+    #[error("I/O error: {0}")]
+    Io(#[from] io::Error),
 }
 
 impl Package {
@@ -155,35 +171,43 @@ impl Package {
             .map(|iv| self.datadir().join(format!("MANIFEST@{iv}")))
     }
 
-    pub fn remove(&self, force: bool, remove_critical: bool) -> Result<()> {
+    pub fn remove(
+        &self,
+        force: bool,
+        remove_critical: bool,
+        suppress: bool,
+    ) -> Result<(), RemoveError> {
         if !self.is_installed() && !force {
             warn!("Can't remove {self} as it's not installed");
-            bail!("Not installed")
+            return Err(RemoveError::NotInstalled)
         }
 
         if self.tags.iter().any(|t| t == "critical") && !remove_critical {
             warn!("Not removing {self} as it's tagged as critical");
             warn!("To force removal, pass --im-really-fucking-stupid");
-            bail!("Critical")
+            return Err(RemoveError::Critical)
         }
 
         if self.tags.iter().any(|t| t == "core") && !force {
             warn!("Not removing {self} as it's tagged as core");
             warn!("To force removal, pass --force");
-            bail!("Core")
+            return Err(RemoveError::Core)
         }
 
-        let manifest = self.manifest().with_context(|| {
-            format!("[UNREACHABLE] Package {self} isn't installed but we got here somehow?")
-        })?;
+        // TODO: Use `ManifestError::MissingManifest`
+        let manifest = self.manifest().ok_or(RemoveError::NotInstalled)?;
 
-        let Ok(unique) = find_unique_paths(&manifest)
-            .inspect_err(|e| error!("Some really weird manifest fuckery is happening. You shouldn't be seeing this error: {e}"))
-        else {
-            bail!("Unexpected")
+        let unique = match find_unique_paths(&manifest) {
+            | Ok(u) => u,
+            | Err(e) => {
+                error!(
+                    "Some really weird manifest fuckery is happening. You shouldn't be seeing this error: {e}"
+                );
+                panic!("Unexpected failure");
+            },
         };
 
-        debug!("Removing paths unique to {self}: {unique:#?}");
+        trace!("Removing paths unique to {self}: {unique:#?}");
         unique.iter().for_each(|p| {
             let path = Path::new("/").join(p);
 
@@ -200,21 +224,21 @@ impl Package {
         });
 
         // This should not fail
-        rm(self.datadir().join("IV")).with_context(|| format!("Failed to remove IV for {self}"))?;
+        rm(self.datadir().join("IV"))?;
 
         // TODO: Add flags and configure options for removing dists and sources
 
-        self.message(MessageHook::Remove);
+        self.message(suppress, MessageHook::Remove);
         Ok(())
     }
 
     #[instrument]
-    pub fn remove_dead_files_after_update(&self) -> Result<()> {
+    pub fn remove_dead_files_after_update(&self) -> Result<(), RemoveError> {
         if !self.is_installed() {
-            error!(
-                "[UNREACHABLE] Not removing files after update for {self} as it's not installed"
+            warn!(
+                "Attempted to update '{self:-}' despite it not being installed. Kindly report this as a bug."
             );
-            bail!("Not installed");
+            return Err(RemoveError::NotInstalled)
         }
 
         let dead_files = find_dead_files(self)?;
@@ -242,10 +266,12 @@ impl Package {
 /// # Finds unique (dead) files in an old manifest
 /// Locates all manifests specific to that package, matching against them for dead files
 #[instrument]
-pub fn find_dead_files(package: &Package) -> Result<Vec<String>> {
+pub fn find_dead_files(package: &Package) -> Result<Vec<String>, RemoveError> {
     if !package.is_installed() {
-        warn!("Attempted to find dead files for uninstalled package '{package}'");
-        bail!("Not installed");
+        warn!(
+            "Attempted to find dead files for uninstalled package '{package}'. Kindly report this as a bug."
+        );
+        return Err(RemoveError::NotInstalled)
     }
 
     // Read all manifests for the current package
@@ -256,7 +282,7 @@ pub fn find_dead_files(package: &Package) -> Result<Vec<String>> {
 
     let this_manifest = package
         .manifest()
-        .with_context(|| format!("Failed to find current manifest for {package}"))?;
+        .ok_or(io::Error::from(ErrorKind::NotFound))?;
 
-    find_unique(&data, &this_manifest)
+    Ok(find_unique(&data, &this_manifest)?)
 }

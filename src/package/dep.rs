@@ -5,8 +5,6 @@ use std::{
     fmt,
 };
 
-use anyhow::Result;
-use permitit::Permit;
 use serde::{
     Deserialize,
     Serialize,
@@ -17,7 +15,11 @@ use tracing::{
     trace,
 };
 
-use super::Package;
+use super::{
+    FormError,
+    Package,
+    install::InstallError,
+};
 use crate::utils::parse::us_array;
 
 pub fn parse_deps(raw: &str) -> Vec<Dep> {
@@ -71,7 +73,7 @@ impl Dep {
     ///
     /// This function does not sacrifice dependency data. `DepKind` is added as a field to
     /// `Package`.
-    pub fn to_package(&self) -> Result<Package> {
+    pub fn to_package(&self) -> Result<Package, FormError> {
         let mut pkg = Package::from_s_file(&self.name)?;
         pkg.depkind = Some(self.kind);
         Ok(pkg)
@@ -138,7 +140,8 @@ impl Package {
         force: bool,
         install_runtime: bool,
         visited: &mut HashSet<String>,
-    ) -> Result<()> {
+        suppress: bool,
+    ) -> Result<(), InstallError> {
         for dep in &self.dependencies {
             if dep.kind == DepKind::Build {
                 trace!("Not installing build dependency '{dep}'");
@@ -151,8 +154,7 @@ impl Package {
             }
 
             dep.to_package()?
-                .install_inner(force, visited)
-                .permit(|e| e.to_string() == "Already installed")?;
+                .install_inner(force, force, visited, suppress)?;
         }
 
         Ok(())

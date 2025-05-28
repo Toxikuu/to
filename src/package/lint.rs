@@ -11,10 +11,6 @@ use std::{
     fs::read_to_string,
 };
 
-use anyhow::{
-    Result,
-    bail,
-};
 use thiserror::Error;
 
 use super::Package;
@@ -51,7 +47,7 @@ impl fmt::Display for Lint {
 }
 
 impl Package {
-    pub fn lint(&self) -> Result<()> {
+    pub fn lint(&self) -> Result<(), LintError> {
         let pkgfile = self.pkgfile();
         let contents = read_to_string(pkgfile)?;
 
@@ -61,22 +57,22 @@ impl Package {
         let lines_vec = lines.clone().collect::<Vec<_>>();
 
         if lints::default_values(lines) {
-            bail!(Lint::DefaultValues)
+            return Err(LintError::Linted(Lint::DefaultValues))
         }
 
         if lints::def_opportunity(&lines_vec) {
-            bail!(Lint::DefOpportunity)
+            return Err(LintError::Linted(Lint::DefOpportunity))
         }
 
         if lints::il_opportunity(&lines_vec) {
-            bail!(Lint::IlOpportunity)
+            return Err(LintError::Linted(Lint::IlOpportunity))
         }
         if lints::no_checkout(self, &lines_vec) {
-            bail!(Lint::NoCheckout)
+            return Err(LintError::Linted(Lint::NoCheckout))
         }
 
         if lints::alias_in_dependencies(self) {
-            bail!(Lint::AliasInDependencies)
+            return Err(LintError::Linted(Lint::AliasInDependencies))
         }
 
         Ok(())

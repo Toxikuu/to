@@ -1,9 +1,14 @@
 // package/prune.rs
 
-use std::fs::read_dir;
+use std::{
+    fs::read_dir,
+    io,
+};
 
-use anyhow::Result;
+use fshelpers::rmr;
+use thiserror::Error;
 use tracing::{
+    debug,
     info,
     trace,
     warn,
@@ -11,15 +16,21 @@ use tracing::{
 
 use super::Package;
 
+#[derive(Error, Debug)]
+pub enum PruneError {
+    #[error("I/O error: {0}")]
+    Io(#[from] io::Error),
+}
+
 impl Package {
-    pub fn prune(&self) -> Result<()> {
+    pub fn prune(&self) -> Result<(), PruneError> {
         let version = &self.version;
         let sources = &self
             .sources
             .iter()
             .map(|s| s.dest.clone())
             .collect::<Vec<_>>();
-        trace!("Checking for pruneable sources");
+        debug!("Checking for pruneable sources");
 
         let sourcedir = self.sourcedir();
         let distdir = self.distdir();
@@ -37,7 +48,7 @@ impl Package {
         };
         trace!("Found {pruneable_sources:?}");
 
-        trace!("Checking for pruneable dists");
+        debug!("Checking for pruneable dists");
         let pruneable_dists = if distdir.exists() {
             read_dir(distdir)?
                 .map_while(Result::ok)
@@ -54,7 +65,7 @@ impl Package {
         };
         trace!("Found {pruneable_dists:?}");
 
-        trace!("Checking for pruneable manifests");
+        debug!("Checking for pruneable manifests");
         let pruneable_manifests = if datadir.exists() {
             read_dir(self.datadir())?
                 .map_while(Result::ok)
@@ -72,12 +83,16 @@ impl Package {
 
         for f in pruneable_sources {
             trace!("Pruning source:   {}", f.display());
-            // rmr(f);
+            if let Err(e) = rmr(&f) {
+                warn!("Failed to prune source {}: {e}", f.display())
+            }
         }
+        // TODO: Test for safety
         for f in pruneable_dists {
             trace!("Pruning dist:     {}", f.display());
             // rmr(f);
         }
+        // TODO: Test for safety
         for f in pruneable_manifests {
             trace!("Pruning manifest: {}", f.display());
             // rmr(f);

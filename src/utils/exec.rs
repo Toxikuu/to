@@ -19,7 +19,7 @@ use tracing::{
     trace,
 };
 
-use crate::structs::config::CONFIG;
+use crate::config::CONFIG;
 
 pub fn sex(command: &str) -> io::Result<String> {
     let command = prepend_source_base(command);
@@ -37,10 +37,9 @@ pub fn sex(command: &str) -> io::Result<String> {
     if !status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
         error!("Command `{command}` returned error:\n{error}");
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("Command failed with status: {status}"),
-        ));
+        return Err(io::Error::other(format!(
+            "Command failed with status: {status}"
+        )));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -92,10 +91,9 @@ pub fn exec(command: &str) -> io::Result<()> {
     let status = child.wait()?;
     if !status.success() {
         error!("Command '{command_clone}' failed with status {status}");
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("Command failed with status: {status}"),
-        ));
+        return Err(io::Error::other(format!(
+            "Command failed with status: {status}"
+        )));
     }
 
     stdout_thread.join().unwrap();
@@ -119,10 +117,9 @@ pub fn exec_interactive(command: &str) -> io::Result<()> {
         .status()?;
 
     if !status.success() {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("Command failed with status: {status}"),
-        ));
+        return Err(io::Error::other(format!(
+            "Command failed with status: {status}"
+        )));
     }
 
     Ok(())

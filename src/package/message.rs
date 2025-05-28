@@ -19,10 +19,6 @@ use tracing::{
 };
 
 use super::Package;
-use crate::structs::cli::{
-    CLI,
-    SubCommand,
-};
 
 /// # A message for a package
 /// Messages contain a title, contents, and a hook. They are tied to a package, though the package
@@ -243,12 +239,10 @@ impl Package {
     }
 
     /// # Displays messages for a package
-    pub fn message(&self, hook: MessageHook) {
-        if let SubCommand::Remove(args) = &*CLI {
-            if args.suppress_messages {
-                debug!("Suppressing messages for {self}");
-                return;
-            }
+    pub fn message(&self, suppress: bool, hook: MessageHook) {
+        if suppress {
+            debug!("Suppressing messages for {self}");
+            return
         }
 
         let messages = self.collect_messages();

@@ -18,15 +18,12 @@ use std::{
     fs::read_to_string,
 };
 
-use anyhow::{
-    Context,
-    Result,
-};
 use dep::DepKind;
 use serde::{
     Deserialize,
     Serialize,
 };
+use thiserror::Error;
 use tracing::{
     error,
     instrument,
@@ -52,6 +49,15 @@ use crate::{
         parse::us_array,
     },
 };
+
+#[derive(Error, Debug)]
+pub enum FormError {
+    #[error("Failed to read sfile")]
+    Io(#[from] std::io::Error),
+
+    #[error("Failed to deserialize package")]
+    Deserialization(#[from] serde_json::Error),
+}
 
 /// # The package struct for `to`.
 ///
@@ -159,14 +165,13 @@ impl Package {
 
     // TODO: Use thiserror
     #[instrument(level = "debug")]
-    pub fn from_s_file(name: &str) -> Result<Self> {
+    pub fn from_s_file(name: &str) -> Result<Self, FormError> {
         let s_file = format!("/var/db/to/pkgs/{name}/s");
-        let s = read_to_string(&s_file)
-            .inspect_err(|e| error!("Failed to read {s_file} for {name}: {e}"))
-            .context("Failed to read s_file")?;
-        serde_json::de::from_str(&s)
-            .inspect_err(|e| error!("Failed to deserialize {name}: {e}"))
-            .context("Failed to deserialize package")
+        let s = read_to_string(&s_file).inspect_err(|e| error!("Failed to read {s_file}: {e}"))?;
+        serde_json::from_str(&s).map_err(|e| {
+            error!("Failed to deserialize {s_file}: {e}");
+            FormError::Deserialization(e)
+        })
     }
 }
 

@@ -2,24 +2,30 @@
 
 use std::{
     fmt,
+    io::{
+        self,
+        ErrorKind,
+    },
     path::PathBuf,
 };
 
-use anyhow::{
-    Context,
-    Result,
-};
+use fshelpers::mkdir_p;
 use serde::{
     Deserialize,
     Serialize,
 };
+use thiserror::Error;
 use tracing::{
     debug,
+    error,
     info,
     instrument,
 };
 
-use super::Package;
+use super::{
+    FormError,
+    Package,
+};
 use crate::{
     exec,
     utils::{
@@ -161,16 +167,24 @@ pub enum SourceKind {
     Pkg, // sources from another package
 }
 
+#[derive(Error, Debug)]
+pub enum SourceError {
+    #[error("I/O error: {0}")]
+    Io(#[from] io::Error),
+
+    #[error("Form error: {0}")]
+    FormError(#[from] FormError),
+}
+
 impl Package {
     // NOTE: This will not be oxidized as so much of this already relies on bash that I'd rather
     // just continue relying on bash than write hundreds of lines of rust to do the same shit.
     //
     /// # Fetches all the sources for a package
     /// Accounts for a specific source already existing
-    pub fn fetch_sources(&self) -> Result<()> {
-        let name = &self.name;
+    pub fn fetch_sources(&self) -> Result<(), SourceError> {
         info!("Fetching sources for {self}");
-        exec!("mkdir -pv /var/cache/to/sources/{name}")?;
+        mkdir_p(self.sourcedir())?;
         for source in &self.sources {
             let url = &source.url;
             let path = source.path(self);
@@ -191,15 +205,18 @@ impl Package {
                 | SourceKind::Pkg => {
                     let name = url;
                     let package = Package::from_s_file(name)?;
-                    package.fetch_sources().with_context(|| {
-                        format!("Failed to fetch sources for source package '{name}'")
+                    package.fetch_sources().inspect_err(|e| {
+                        error!("Failed to fetch sources for source package '{name}': {e}");
                     })?;
 
                     // Copy only the latest sources for the source package
                     for source in &package.sources {
                         let origin = source.path(&package);
-                        let dest =
-                            path.join(origin.file_name().context("Source has no file name")?);
+                        let dest = path.join(
+                            origin
+                                .file_name()
+                                .ok_or(io::Error::from(ErrorKind::InvalidFilename))?,
+                        );
 
                         // If the destination doesn't exist, or its modtime is older than the
                         // origin, copy

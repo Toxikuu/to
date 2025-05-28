@@ -6,7 +6,10 @@ use std::{
         File,
         rename,
     },
-    io::Write,
+    io::{
+        ErrorKind,
+        Write,
+    },
     path::Path,
     time::{
         Duration,
@@ -14,7 +17,6 @@ use std::{
     },
 };
 
-use anyhow::Context;
 use fshelpers::mkdir_p;
 use futures::{
     StreamExt,
@@ -45,9 +47,9 @@ use tracing::{
 };
 
 use super::Package;
-use crate::structs::config::CONFIG;
+use crate::config::CONFIG;
 
-pub async fn multipull(pkgs: &[Package]) -> anyhow::Result<()> {
+pub async fn multipull(pkgs: &[Package]) -> Result<(), DownloadError> {
     let addr = &CONFIG.server_address;
     let (client, m, sty) = setup().await?;
     let mut tasks = Vec::new();
@@ -61,7 +63,7 @@ pub async fn multipull(pkgs: &[Package]) -> anyhow::Result<()> {
         let client = client.clone();
         let filename = distfile
             .file_name()
-            .context("Nameless distfile")?
+            .ok_or(io::Error::from(ErrorKind::InvalidFilename))?
             .to_string_lossy()
             .to_string();
         let url = format!("http://{addr}/{filename}");
@@ -168,6 +170,8 @@ where
         && let Some(local_modtime) = get_local_modtime(filename)
         && server_modtime <= local_modtime
     {
+        pb.finish();
+        pb.tick();
         debug!("Skipping download for extant file '{filename_display}'");
         return Err(DownloadError::Extant)
     }

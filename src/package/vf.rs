@@ -6,6 +6,7 @@ use std::{
         read_to_string,
         write,
     },
+    io,
     path::PathBuf,
     time::{
         Duration,
@@ -13,12 +14,6 @@ use std::{
     },
 };
 
-use anyhow::{
-    Context,
-    Result,
-    anyhow,
-    bail,
-};
 use fshelpers::{
     mkdir_p,
     rmf,
@@ -27,6 +22,7 @@ use serde::{
     Deserialize,
     Serialize,
 };
+use thiserror::Error;
 use tracing::{
     debug,
     error,
@@ -36,15 +32,38 @@ use tracing::{
 use crate::{
     package::Package,
     sex,
-    structs::cli::{
-        CLI,
-        SubCommand,
-    },
     utils::{
         commit_hash::try_shorten,
         parse::is_commit_sha,
     },
 };
+
+#[derive(Debug, Error)]
+pub enum VfError {
+    #[error("Failed to fetch version")]
+    Fetch,
+
+    #[error("Version fetching is disabled for this package")]
+    Disabled,
+
+    #[error("Cache error: {0}")]
+    Cache(#[from] VfCacheError),
+}
+
+#[derive(Debug, Error)]
+pub enum VfCacheError {
+    #[error("No cache")]
+    NoCache,
+
+    #[error("Cache too old")]
+    TooOld,
+
+    #[error("Not recaching")]
+    NotRecaching,
+
+    #[error("I/O error")]
+    Io(#[from] io::Error),
+}
 
 impl Package {
     /// # Fetches the upstream version of a package
@@ -64,27 +83,25 @@ impl Package {
     /// is pretty predictable with a simple `git ls-remote $u HEAD`.
     ///
     /// The gr and vfs bash functions are tentatively defined in `envs/base.env`.
-    pub async fn version_fetch(&self) -> Result<Option<String>> {
+    pub async fn version_fetch(&self, ignore_cache: bool) -> Result<Option<String>, VfError> {
         let Some(u) = &self.upstream else {
             return Ok(None);
         };
 
-        if let SubCommand::Vf(args) = &*CLI {
-            if args.ignore_cache {
-                debug!("Ignoring vf cache for {self:-}");
-            } else {
-                // Try to uncache
-                // TODO: Kinda cursed, not sure if I wanna keep it this way. Maybe I should only cache the
-                // upstream version instead of the whole Vf struct.
-                match Vf::uncache(self) {
-                    | Ok(vf) => {
-                        debug!("Vf cache hit for {self:-}");
-                        return Ok(Some(vf.uv));
-                    },
-                    | Err(e) => {
-                        trace!("Cache miss for {self:-}: {e}");
-                    },
-                }
+        if ignore_cache {
+            debug!("Ignoring vf cache for {self:-}")
+        } else {
+            // Try to uncache
+            // TODO: Kinda cursed, not sure if I wanna keep it this way. Maybe I should only cache the
+            // upstream version instead of the whole Vf struct.
+            match Vf::uncache(self) {
+                | Ok(vf) => {
+                    debug!("Vf cache hit for {self:-}");
+                    return Ok(Some(vf.uv));
+                },
+                | Err(e) => {
+                    trace!("Cache miss for {self:-}: {e}");
+                },
             }
         }
 
@@ -100,11 +117,10 @@ impl Package {
             format!("gr '{u}' | vfs | sort -V | tail -n1")
         };
 
-        let estimate =
-            sex!("{vf_cmd}").with_context(|| format!("Failed to fetch version for {self:-}"));
+        let estimate = sex!("{vf_cmd}").map_err(|_| VfError::Fetch)?;
 
         Ok(Some(
-            estimate?
+            estimate
                 .to_ascii_lowercase()
                 .trim_start_matches(&self.name)
                 .trim_start_matches('-')
@@ -114,10 +130,9 @@ impl Package {
         ))
     }
 
-    pub async fn vf(&self) -> Result<Vf> {
-        let uv = self.version_fetch().await.map_err(|e| {
+    pub async fn vf(&self, ignore_cache: bool) -> Result<Vf, VfError> {
+        let uv = self.version_fetch(ignore_cache).await.inspect_err(|e| {
             error!("Failed to fetch upstream version for {self:-}: {e}");
-            anyhow!("Failed to fetch upstream")
         })?;
 
         let n = &self.name;
@@ -127,7 +142,7 @@ impl Package {
             | Some(uv) => Ok(Vf::new(n, v, &uv)),
             | None => {
                 debug!("Upstream version fetching is disabled for {self:-}. Skipping...");
-                bail!("Disabled");
+                Err(VfError::Disabled)
             },
         }
     }
@@ -173,7 +188,7 @@ impl Vf {
     /// A Vf is not recached if the cache file exists, since it is assumed that the Vf must have
     /// been uncached if the cache file exists.
     // TODO: Consider only caching uv instead of the whole vf struct
-    pub fn cache(&self) -> Result<()> {
+    pub fn cache(&self) -> Result<(), VfCacheError> {
         let cache_file = Self::cache_file(&self.n);
 
         mkdir_p(
@@ -184,11 +199,11 @@ impl Vf {
 
         if cache_file.exists() {
             debug!("Not recaching vf for {}@{}", &self.n, try_shorten(&self.v));
-            bail!("Not recaching")
+            return Err(VfCacheError::NotRecaching)
         }
 
-        let ser = serde_json::to_string_pretty(&self)?;
-        write(cache_file, &ser).context("Failed to write cache")?;
+        let ser = serde_json::to_string_pretty(&self).unwrap(); // TODO: Replace the serialization
+        write(cache_file, &ser)?;
         debug!("Cached vf for {}@{}", &self.n, try_shorten(&self.v));
 
         Ok(())
@@ -199,21 +214,21 @@ impl Vf {
     /// # Attempts to uncache a vf
     /// Won't uncache if there is no cache file or the cache file is more than 4 hours old
     // TODO: Consider just taking package_name: &str instead of &Package
-    pub fn uncache(package: &Package) -> Result<Vf> {
+    pub fn uncache(package: &Package) -> Result<Vf, VfCacheError> {
         let cache_file = Vf::cache_file(&package.name);
 
         if !cache_file.exists() {
-            bail!("No cache")
+            return Err(VfCacheError::NoCache)
         }
 
         let four_hours_ago = SystemTime::now() - Duration::from_hours(4);
         if cache_file.metadata()?.modified()? < four_hours_ago {
             rmf(cache_file)?;
-            bail!("Cache too old")
+            return Err(VfCacheError::TooOld)
         }
 
         let contents = read_to_string(cache_file)?;
-        let vf = serde_json::from_str(&contents)?;
+        let vf = serde_json::from_str(&contents).unwrap(); // TODO: Replace the cache serialization
         Ok(vf)
     }
 }
