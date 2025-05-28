@@ -167,5 +167,6 @@ impl Package {
     ) -> Result<(), InstallError> {
         let mut visited = HashSet::new();
         self.install_inner(force, full_force, &mut visited, suppress)
+            .permit(|e| matches!(e, InstallError::AlreadyInstalled))
     }
 }
