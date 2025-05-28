@@ -179,7 +179,10 @@ impl Package {
             match source.kind {
                 | SourceKind::Git => {
                     if path.exists() {
-                        exec!("cd '{path_str}' && git pull --depth=1")?;
+                        // Do a shallow, but forceful pull
+                        exec!(
+                            "cd '{path_str}' && git fetch --depth=1 origin && git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)"
+                        )?;
                     } else {
                         exec!("git clone --depth=1 '{url}' '{path_str}'")?;
                     }
