@@ -115,6 +115,7 @@ command_boilerplate! {
     Remove,
     Sync,
     View,
+    Vf,
 }
 
 #[macro_export]
