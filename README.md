@@ -61,6 +61,7 @@ WORKING ON IT. SOON I PROMISE.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
+- [ ] Make cli modular
 - [x] Don't install runtime dependencies to the build environment.
     - [x] There needs to be some way to check whether a package is being
     installed in the build environment. Use the existence of /D.
@@ -74,10 +75,11 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 - [x] Stop using /var/cache for everything. lol.
 - [x] Add zstd to LFStage
 - [x] Use the pardl poc instead of curl for pull
-- [ ] Add `to data`
-    - [ ] Should display data about `to`, including the number of installed
-    packages, the total number of packages, the health (with a flag), the number
-    of outdated packages, the number of commit-versioned packages
+- [x] Add `to data`
+    - [ ] If called without the package positional argument, should display data
+    about `to`, including the number of installed packages, the total number of
+    packages, the health (with a flag), the number of outdated packages, the
+    number of commit-versioned packages.
 - [ ] Improve `to view`
     - [x] Add `--dependencies` and `--deep-dependencies`
     - [ ] Add `--dependants`
@@ -110,6 +112,11 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
         dependencies. Not sure how I plan to work around this ngl.
 - [x] Add post-build QA checks
      - [ ] Make them less shit
+        - [ ] Make them modular
+        - [ ] Add a check for static libraries, and libtool archives
+        - [ ] Add a check for missing pc files, bin, lib, etc.
+        - [ ] Add e.g. 'qa=(!static)' support to the pkg parser
+            - [ ] Allow qa checks to be toggled on or off
 - [x] Add `--debug` for `to view`, and change the default behavior to give
       something human readable.
 - [x] Add `to alias`
