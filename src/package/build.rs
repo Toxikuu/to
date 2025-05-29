@@ -163,20 +163,23 @@ impl Package {
         // The idea is to resolve the shallow build dependencies, so extraneous deep build
         // dependencies aren't present in the chroot.
         //
-        // We first find all the shallow build dependencies, then all required deep dependencies.
-        // Those are then copied to the build environment. We also use a HashSet for extra
-        // deduplication.
+        // We first find all the required deep dependencies, then tack on all the shallow build
+        // dependencies. The pkgfile, sfile, and distfile for each dependency is then copied over
+        // to the build environment. A HashSet is used for extra deduplication.
+        //
+        // TODO: Maybe only add build dependencies if they're not already in the hashset; "b,glibc"
+        // and "glibc" would be deduplicated this way.
         let mut deps = self
-            .dependencies
-            .iter()
-            .filter(|d| d.kind == DepKind::Build)
-            .map(|d| d.to_package().expect("Failed to form package for dep"))
+            .resolve_deps()
+            .into_iter()
+            .filter(|d| d.depkind.expect("Dep should have a kind") == DepKind::Required)
             .collect::<HashSet<_>>();
 
         deps.extend(
-            self.resolve_deps()
-                .into_iter()
-                .filter(|d| d.depkind.expect("Dep should have a kind") == DepKind::Required),
+            self.dependencies
+                .iter()
+                .filter(|d| d.kind == DepKind::Build)
+                .map(|d| d.to_package().expect("Failed to form package for dep")),
         );
 
         #[rustfmt::skip]
