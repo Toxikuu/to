@@ -1,6 +1,8 @@
 // utils/exec.rs
 //! Utility functions for command execution
 
+// TODO: Probably use BASH_ENV= to avoid bash just fucking ignoring my whole environment.
+
 use std::{
     io::{
         self,
