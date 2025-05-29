@@ -26,7 +26,7 @@ macro_rules! command_boilerplate {
     };
 }
 
-pub const SCRIPT_DIR: &str = "/usr/share/to/scripts";
+pub const SCRIPT_DIR: &str = "/usr/share/to/scripts/maintainer";
 
 use std::io;
 
