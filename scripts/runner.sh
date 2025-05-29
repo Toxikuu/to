@@ -4,7 +4,7 @@
 
 
 # Enable strict mode :100:
-set -eu -o pipefail
+set -euo pipefail
 
 
 # Source stuff
