@@ -4,7 +4,6 @@ use std::{
     collections::HashSet,
     fs::{
         copy,
-        read_dir,
         write,
     },
     path::{
@@ -23,7 +22,6 @@ use tracing::{
     error,
     info,
     trace,
-    warn,
 };
 
 use super::{
@@ -250,33 +248,6 @@ impl Package {
         "#
         )
         .map_err(|_| BuildError::Build)
-    }
-
-    // TODO: Refactor this to be more structured like the lint system later
-    // TODO: Add a QA error subtype
-    fn qa(&self) -> Result<(), BuildError> {
-        // D empty
-        {
-            let destdir = Path::new(MERGED).join("D");
-            if read_dir(destdir)
-                .map_err(|_| BuildError::QA)?
-                .last()
-                .is_none()
-            {
-                warn!("QA: $D is empty");
-                return Err(BuildError::QA)
-            }
-        }
-
-        // /usr/local used
-        {
-            let usrlocal = Path::new(MERGED).join("usr/local");
-            if read_dir(usrlocal).is_ok() {
-                return Err(BuildError::QA)
-            }
-        }
-
-        Ok(())
     }
 
     fn save_distfile(&self) -> Result<(), BuildError> {

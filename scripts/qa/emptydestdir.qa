@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+shopt -s nullglob dotglob
+
+files=("$D"/*)
+
+if [ ${#files[@]} -eq 0 ]; then die "QA: \$D is empty"; fi

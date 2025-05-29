@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+if [ -e "$D/usr/local" ]; then die "QA: /usr/local exists"; fi

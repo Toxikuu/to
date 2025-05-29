@@ -1,0 +1,49 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+. /pkg || die "Failed to source /pkg"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+# Define QA checks and their default states
+declare -A QA=(
+    [emptydestdir]=on
+    [usrlocal]=on
+    [la]=on
+    [static]=on
+)
+
+
+# Helper function to check if a given QA key exists
+is_key() {
+    [[ -v QA["$1"] ]]
+}
+
+
+for opt in ${qa:-}; do
+    if [[ $opt == '!'* ]]; then
+        key="${opt:1}"
+        is_key "$key" || die "Unknown QA check: $key"
+        QA["$key"]=off
+    elif [[ $opt == * ]]; then
+        key="${opt:1}"
+        is_key "$key" || die "Unknown QA check: $key"
+        QA["$key"]=on
+    fi
+done
+
+
+for k in "${!QA[@]}"; do
+    v="${QA[$k]}"
+    if [[ $v == on ]]; then
+        printf "QA: %-16s ... " "$k"
+        if "$SCRIPT_DIR/$k.qa"; then
+            echo "PASS"
+        else
+            echo -e "\x1b[31;1mFAIL\x1b[0m"
+            die "QA check '$k' failed"
+        fi
+    else
+        printf "QA: %-16s ... " "$k"
+        echo "SKIP"
+    fi
+done

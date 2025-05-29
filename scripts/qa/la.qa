@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+readarray -t las < <(find "$D" -type f -name '*.la')
+count=${#las[@]}
+
+if [ "$count" -ne 0 ]; then die "QA: Found $count libtool archives"; fi

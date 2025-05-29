@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+readarray -t libs < <(find "$D" -type f -name '*.a')
+count=${#libs[@]}
+
+if [ "$count" -ne 0 ]; then die "QA: Found $count static libraries"; fi
