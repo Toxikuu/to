@@ -29,7 +29,7 @@ pub enum Lint {
     DefaultValues,
     DefOpportunity,
     IlOpportunity,
-    NoCheckout,
+    // NoCheckout,
     AliasInDependencies,
 }
 
@@ -39,7 +39,7 @@ impl fmt::Display for Lint {
             | Lint::DefaultValues => "Default Values",
             | Lint::DefOpportunity => "Def Opportunity",
             | Lint::IlOpportunity => "Il Opportunity",
-            | Lint::NoCheckout => "No Checkout",
+            // | Lint::NoCheckout => "No Checkout",
             | Lint::AliasInDependencies => "Alias in Dependencies",
         };
         write!(f, "{s}")
@@ -67,9 +67,10 @@ impl Package {
         if lints::il_opportunity(&lines_vec) {
             return Err(LintError::Linted(Lint::IlOpportunity))
         }
-        if lints::no_checkout(self, &lines_vec) {
-            return Err(LintError::Linted(Lint::NoCheckout))
-        }
+
+        // if lints::no_checkout(self, &lines_vec) {
+        //     return Err(LintError::Linted(Lint::NoCheckout))
+        // }
 
         if lints::alias_in_dependencies(self) {
             return Err(LintError::Linted(Lint::AliasInDependencies))
@@ -84,7 +85,7 @@ mod lints {
 
     use crate::package::{
         Package,
-        source::SourceKind,
+        // source::SourceKind,
     };
 
     /// # Checks whether default values have been used
@@ -131,21 +132,21 @@ mod lints {
             .any(|l| l.contains("install -") && l.contains("/usr/share/licenses"))
     }
 
-    /// # Checks whether git checkout was omitted
-    /// This lint only runs if a package has a git source
-    pub fn no_checkout(package: &Package, lines_vec: &[&str]) -> bool {
-        if package
-            .sources
-            .iter()
-            .any(|s| matches!(s.kind, SourceKind::Git))
-        {
-            lines_vec
-                .iter()
-                .all(|l| !l.contains("git checkout ") && !l.contains("gco"))
-        } else {
-            false
-        }
-    }
+    // /// # Checks whether git checkout was omitted
+    // /// This lint only runs if a package has a git source
+    // pub fn no_checkout(package: &Package, lines_vec: &[&str]) -> bool {
+    //     if package
+    //         .sources
+    //         .iter()
+    //         .any(|s| matches!(s.kind, SourceKind::Git))
+    //     {
+    //         lines_vec
+    //             .iter()
+    //             .all(|l| !l.contains("git checkout ") && !l.contains("gco"))
+    //     } else {
+    //         false
+    //     }
+    // }
 
     /// # Checks whether a package has an alias in its dependencies
     /// Checks if the pkdir is a symlink

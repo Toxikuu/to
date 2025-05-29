@@ -185,20 +185,30 @@ impl Package {
     pub fn fetch_sources(&self) -> Result<(), SourceError> {
         info!("Fetching sources for {self}");
         mkdir_p(self.sourcedir())?;
+        let pkgfile = self.pkgfile();
         for source in &self.sources {
             let url = &source.url;
             let path = source.path(self);
-            let path_str = path.display();
             debug!("Fetching source: {source:#?}");
+            // TODO: Add support for SourceKind::Custom
             match source.kind {
                 | SourceKind::Git => {
                     if path.exists() {
-                        // Do a shallow, but forceful pull
+                        // NOTE: This is probably overkill and redundant, but I'm not a git wizard.
                         exec!(
-                            "cd '{path_str}' && git fetch --depth=1 origin && git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)"
+                            // TODO: Try dropping the `git fetch --depth=1 origin` part
+                            r#"  cd '{s}' && source '{p}' && git fetch --depth=1 origin "${{tag:-{v}}}" && gco "${{tag:-{v}}}"  "#,
+                            s = path.display(),
+                            p = pkgfile.display(),
+                            v = self.version,
                         )?;
                     } else {
-                        exec!("git clone --depth=1 '{url}' '{path_str}'")?;
+                        exec!(
+                            r#"  source '{p}' && git clone --depth=1 '{url}' '{s}' && cd '{s}' && gco "${{tag:-{v}}}"  "#,
+                            p = pkgfile.display(),
+                            s = path.display(),
+                            v = self.version,
+                        )?;
                     }
                 },
 
@@ -231,7 +241,8 @@ impl Package {
                 | _ => {
                     if !path.exists() {
                         exec!(
-                            "curl -fSL -# -C - --retry 3 -o '{path_str}'.part '{url}' && mv -vf '{path_str}'.part '{path_str}'"
+                            "curl -fSL -# -C - --retry 3 -o '{s}'.part '{url}' && mv -vf '{s}'.part '{s}'",
+                            s = path.display(),
                         )?;
                     }
                 },
