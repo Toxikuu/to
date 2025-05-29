@@ -61,6 +61,7 @@ fn log() {
         // Silence some loud crates
         .add_directive("dircpy=warn".parse().unwrap())
         .add_directive("reqwest=warn".parse().unwrap())
+        .add_directive("fshelpers=warn".parse().unwrap())
         .add_directive("hyper_util=warn".parse().unwrap());
 
     // Trace-level logs are only written to stdout as they take up a lot of space
