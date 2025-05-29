@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
+set -euo pipefail
 # Runner script for `to`
 # This gets executed in the chroot
-
-
-# Enable strict mode :100:
-set -euo pipefail
 
 
 # Source stuff
@@ -13,7 +10,7 @@ source /pkg
 
 
 # Enter the build directory
-cd "${B:?}"
+cd "$B"
 
 
 # Install dependencies, if any
@@ -28,15 +25,15 @@ fi
 register_source() {
     echo "Registering source file '$src'"
 
-    if file "$src" | grep 'Zip archive data'; then
-        # zips
-        unzip "$src"  -d "$B" || die "Failed to extract $src (zip)"
-    elif [[ "$src" == *".t"*"z"* ]]; then
+    if [[ "$src" == *".t"*"z"* ]]; then
         # tarballs
-        tar xf "$src" -C "$B" || die "Failed to extract $src (tar)"
+        tar xf "$src" -C "$B" || die "Failed to register $src (tar)"
+    elif file "$src" | grep -q 'Zip archive data'; then
+        # zips
+        unzip "$src"  -d "$B" || die "Failed to register $src (zip)"
     else
         # git repos, patches, or random shit
-        cp -af "$src"    "$B" || die "Failed to extract $src (copy)"
+        cp -af "$src"    "$B" || die "Failed to register $src (copy)"
     fi
 }
 
@@ -55,8 +52,10 @@ fi
 # If there's only one directory in $B, enter it; else, let `b` handle it
 readarray -t dirs < <(find . -mindepth 1 -maxdepth 1 -type d)
 if [ "${#dirs[@]}" -eq 1 ]; then
-    cd "$dirs" || die "Multiple source directories. Specify which in \`b()\`."
+    cd "$dirs"
     echo "Entered source directory '$dirs' (only)"
+else
+    die "Multiple source directories. Specify which in \`b()\`."
 fi
 
 
@@ -76,13 +75,18 @@ if is_function t && $TO_TEST; then
 fi
 
 
+# Run QA checks
+echo "Running QA checks"
+/usr/share/to/scripts/qa/qa.sh
+
+
 # Check if anything is in $D
 is_dest_populated() {
     [ -n "$(find "$D" -mindepth 1 -maxdepth 1)" ]
 }
 
 
-# Create a package (execute the package function)
+# Create a package
 if is_dest_populated; then
 
     # Strip if not disabled
