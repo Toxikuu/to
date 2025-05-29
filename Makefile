@@ -27,8 +27,8 @@ install:
 
 ifeq ($(ENABLE_TOOLS),1)
 	install -Dm644 $(wildcard git-templates/*) -t $(DESTDIR)/usr/share/to/git-templates/
-	install -Dm755 $(wildcard scripts/*)       -t $(DESTDIR)/usr/share/to/scripts/
 	install -Dm644 template                    -t $(DESTDIR)/usr/share/to/
+	cp -avf scripts                               $(DESTDIR)/usr/share/to/
 endif
 
 	install -vdm755 $(DESTDIR)/etc/to
@@ -45,7 +45,7 @@ endif
 
 # TODO: Install docs once I write some
 ifeq ($(ENABLE_DOCS),1)
-	echo "SOON"
+	@echo "SOON"
 endif
 
 ifeq ($(ENABLE_TOOLS),1)
