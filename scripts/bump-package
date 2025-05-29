@@ -35,7 +35,7 @@ finalize() {
         -e "s,<name>,$n,g"          \
         -e "s,<old-version>,$old,g" \
         -e "s,<new-version>,$new,g" \
-    /usr/share/to/git-templates/update-package > "$COMMIT"
+    /usr/share/to/git-templates/bump-package > "$COMMIT"
     git commit --template="$COMMIT"
 
     rm -f "$COMMIT"
