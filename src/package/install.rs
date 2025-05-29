@@ -102,6 +102,7 @@ impl Package {
         exec!(
             r#"
 
+        set -euo pipefail
         source {pkgfile:?}
         mkdir -pv {data:?}
 
