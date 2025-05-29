@@ -41,7 +41,10 @@ impl Command {
             .map(|p| Package::from_s_file(p))
             .collect::<Result<_, _>>()?;
 
-        let client = create_client().await?;
+        let client = create_client()
+            .await
+            .inspect_err(|e| error!("Failed to create client: {e}"))?;
+
         for pkg in &pkgs {
             let dist = pkg.distfile();
             let distfile = dist.display();
