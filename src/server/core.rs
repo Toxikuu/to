@@ -26,7 +26,12 @@ pub async fn serve() -> Result<(), ServeError> {
         .route("/{filename}", get(download))
         .route("/up/{filename}", post(upload));
 
-    let addr = &CONFIG.server_address;
+    let full_addr = &CONFIG.server_address;
+    let addr = full_addr
+        .split_once("://")
+        .map(|a| a.1)
+        .unwrap_or(full_addr);
+
     let listener = tokio::net::TcpListener::bind(&addr).await?;
 
     // Allegedly, this never returns an error:
@@ -35,7 +40,6 @@ pub async fn serve() -> Result<(), ServeError> {
     // (currently, one second)."
     // -- Axum API documentation
     axum::serve(listener, router).await.unwrap();
-
-    info!("Listening on {addr}");
+    info!("Serving on {full_addr}");
     Ok(())
 }

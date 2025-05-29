@@ -28,9 +28,9 @@ use indicatif::{
     ProgressBar,
     ProgressStyle,
 };
-use permitit::Permit;
 use reqwest::{
     Client,
+    Response,
     header::{
         HeaderMap,
         LAST_MODIFIED,
@@ -43,58 +43,12 @@ use tokio::task;
 use tracing::{
     debug,
     error,
+    trace,
     warn,
 };
 
 use super::Package;
 use crate::config::CONFIG;
-
-pub async fn multipull(pkgs: &[Package]) -> Result<(), DownloadError> {
-    let addr = &CONFIG.server_address;
-    let (client, m, sty) = setup().await?;
-    let mut tasks = Vec::new();
-
-    // distfile contains the full path here
-    for pkg in pkgs {
-        let distfile = pkg.distfile();
-        let distdir = pkg.distdir();
-        mkdir_p(distdir)?;
-
-        let client = client.clone();
-        let filename = distfile
-            .file_name()
-            .ok_or(io::Error::from(ErrorKind::InvalidFilename))?
-            .to_string_lossy()
-            .to_string();
-        let url = format!("http://{addr}/{filename}");
-
-        // set up progress bar
-        let pb = m.add(ProgressBar::new(0));
-        pb.set_style(sty.clone());
-        pb.set_message(format!("{pkg:-}"));
-        pb.set_prefix("\x1b[37;1m[\x1b[36mo\x1b[37m]\x1b[0m");
-        pb.set_position(0);
-        pb.set_length(1);
-        pb.tick();
-
-        let task = task::spawn(async move {
-            match download_file(client, &url, &distfile, pb.clone())
-                .await
-                .permit(|e| matches!(e, DownloadError::Extant))
-            {
-                | Ok(()) => pb.set_prefix("\x1b[37;1m[\x1b[32m*\x1b[37m]\x1b[0m"),
-                | Err(e) => {
-                    pb.set_prefix("\x1b[37;1m[\x1b[31m-\x1b[37m]\x1b[0m");
-                    error!("Failed to download {filename} from {url}: {e}");
-                },
-            }
-        });
-        tasks.push(task);
-    }
-
-    join_all(tasks).await;
-    Ok(())
-}
 
 pub fn get_upstream_modtime(headers: &HeaderMap) -> Option<SystemTime> {
     let h = headers.get(LAST_MODIFIED)?;
@@ -111,9 +65,8 @@ pub fn get_local_modtime(path: &Path) -> Option<SystemTime> {
 
 #[derive(Debug, Error)]
 pub enum DownloadError {
-    #[error("File exists and is current")]
-    Extant,
-
+    // #[error("File exists and is current")]
+    // Extant,
     #[error("Reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
 
@@ -127,6 +80,100 @@ pub enum DownloadError {
     GetServerModtime,
 }
 
+pub async fn multipull(pkgs: &[Package], force: bool) -> Result<(), DownloadError> {
+    let addr = &CONFIG.server_address;
+    let (client, m, sty) = setup().await?;
+    let mut tasks = Vec::new();
+
+    // distfile contains the full path here
+    for pkg in pkgs {
+        let distfile = pkg.distfile();
+        let distdir = pkg.distdir();
+        mkdir_p(distdir)?;
+
+        let client = client.clone();
+        let filename = distfile
+            .file_name()
+            .ok_or(io::Error::from(ErrorKind::InvalidFilename))?
+            .to_string_lossy()
+            .to_string();
+        let url = format!("{addr}/{filename}");
+
+        let m = m.clone();
+        let sty = sty.clone();
+        let msg = format!("{pkg:-}");
+        let task = task::spawn(async move {
+            match should_download(&client, &url, &distfile, force).await {
+                | Ok(Some(r)) => {
+                    // set up progress bar
+                    let pb = m.add(ProgressBar::new(0));
+                    pb.set_style(sty.clone());
+                    pb.set_message(msg);
+                    pb.set_prefix("\x1b[37;1m[\x1b[36mo\x1b[37m]\x1b[0m");
+                    pb.set_position(0);
+                    pb.set_length(1);
+                    pb.tick();
+
+                    match download_file(r, &distfile, pb.clone()).await {
+                        | Ok(()) => pb.set_prefix("\x1b[37;1m[\x1b[32m*\x1b[37m]\x1b[0m"),
+                        | Err(e) => {
+                            pb.set_prefix("\x1b[37;1m[\x1b[31m-\x1b[37m]\x1b[0m");
+                            error!("Failed to download {filename} from {url}: {e}");
+                        },
+                    }
+                },
+                | Ok(None) => {
+                    debug!("Skipping {msg}");
+                },
+                | Err(e) => {
+                    error!("Error checking whether {filename} should be downloaded: {e}")
+                },
+            }
+        });
+        tasks.push(task);
+    }
+
+    join_all(tasks).await;
+    Ok(())
+}
+
+async fn should_download(
+    client: &Client,
+    url: &str,
+    file: &Path,
+    force: bool,
+) -> Result<Option<Response>, DownloadError> {
+    debug!("Checking whether {url} should be downloaded");
+
+    let resp = client.get(url).send().await?.error_for_status()?;
+    let headers = resp.headers();
+
+    if force {
+        debug!("Should download because --force was passed");
+        return Ok(Some(resp))
+    }
+
+    if !file.exists() {
+        debug!("Should download because local file does not exist");
+        return Ok(Some(resp))
+    }
+
+    let server_modtime = get_upstream_modtime(headers).ok_or(DownloadError::GetServerModtime)?;
+    let local_modtime = get_local_modtime(file).unwrap_or(SystemTime::UNIX_EPOCH);
+
+    if server_modtime <= local_modtime {
+        debug!(
+            "Should not download because local file ({local_modtime:?}) is not older than server's {server_modtime:?}"
+        );
+        Ok(None)
+    } else {
+        debug!(
+            "Should download because server's file ({server_modtime:?}) is newer than local ({local_modtime:?})"
+        );
+        Ok(Some(resp))
+    }
+}
+
 /// # Download a file
 ///
 /// This function takes a url and filename. The filename can be a path.
@@ -136,26 +183,21 @@ pub enum DownloadError {
 ///
 /// It also writes to a part file before moving to the destination on completion. Note that
 /// downloads cannot be resumed because that shit hurts my head.
-async fn download_file<P>(
-    client: Client,
-    url: &str,
-    filename: P,
-    pb: ProgressBar,
-) -> Result<(), DownloadError>
+async fn download_file<P>(resp: Response, filename: P, pb: ProgressBar) -> Result<(), DownloadError>
 where
     P: AsRef<Path>,
 {
     let filename = filename.as_ref();
     let filename_display = filename.display();
-    debug!("Downloading '{url}' to '{filename_display}'");
+    debug!("Downloading '{filename_display}'");
 
     // it'll be manually updated
     pb.disable_steady_tick();
 
-    // fetch the url
-    debug!("Fetching url '{url}'");
-    let resp = client.get(url).send().await?;
+    // reuse the response we fetched earlier
+    let resp = resp.error_for_status()?;
     let headers = resp.headers();
+    dbg!(&headers);
 
     let server_modtime = match get_upstream_modtime(headers) {
         | Some(t) => t,
@@ -165,32 +207,20 @@ where
         },
     };
 
-    // skip extant files if they're current or newer
-    if filename.exists()
-        && let Some(local_modtime) = get_local_modtime(filename)
-        && server_modtime <= local_modtime
-    {
-        pb.finish();
-        pb.tick();
-        debug!("Skipping download for extant file '{filename_display}'");
-        return Err(DownloadError::Extant)
-    }
-
-    // get content length
-    let content_length = resp.content_length();
-    debug_assert!(content_length.map(|l| l > 0).unwrap_or(true));
-    debug!("Content length reported as {content_length:?}");
+    // NOTE: `resp.content_lenght()` fails for head().
+    let content_length = resp.content_length().unwrap_or(0);
+    debug_assert!(content_length > 0);
 
     // create a part file
     let partfile_ = filename.with_added_extension("part");
     let mut partfile = File::create(&partfile_)?;
+
     let mut stream = resp.bytes_stream();
+    trace!("Created partfile at {partfile:?}");
 
     // set the download size if known
-    if let Some(size) = content_length {
-        pb.set_length(size);
-        pb.tick()
-    }
+    pb.set_length(content_length);
+    pb.tick();
 
     // write the file and set the progress bar length
     let mut downloaded = 0;
@@ -198,10 +228,8 @@ where
         let data = chunk?;
         partfile.write_all(&data)?;
         downloaded += data.len() as u64;
+        trace!("Downloaded {downloaded} bytes");
 
-        if content_length.is_none() {
-            pb.set_length(downloaded);
-        }
         pb.set_position(downloaded);
         pb.tick();
     }
@@ -215,7 +243,7 @@ where
 
     pb.finish();
     pb.tick();
-    debug!("Downloaded '{url}' to '{filename_display}'");
+    debug!("Downloaded '{filename_display}'");
 
     Ok(())
 }
