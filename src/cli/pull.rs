@@ -15,6 +15,10 @@ pub struct Command {
     /// The package to install
     #[arg(value_name = "PACKAGE", num_args=0..)]
     pub packages: Vec<String>,
+
+    /// Whether to forcibly pull
+    #[arg(short, long)]
+    pub force: bool,
 }
 
 impl Command {
@@ -24,7 +28,7 @@ impl Command {
             .map(|p| Package::from_s_file(p))
             .collect::<Result<_, _>>()?;
 
-        multipull(&pkgs)
+        multipull(&pkgs, self.force)
             .await
             .inspect_err(|e| error!("Failed to pull one or more packages: {e}"))?;
 
