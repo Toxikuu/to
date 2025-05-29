@@ -5,6 +5,7 @@ use std::{
     fmt,
 };
 
+use permitit::Permit;
 use serde::{
     Deserialize,
     Serialize,
@@ -144,17 +145,21 @@ impl Package {
     ) -> Result<(), InstallError> {
         for dep in &self.dependencies {
             if dep.kind == DepKind::Build {
-                trace!("Not installing build dependency '{dep}'");
+                // trace!("Not installing build dependency '{dep}'");
                 continue;
             }
 
             if dep.kind == DepKind::Runtime && !install_runtime {
-                trace!("Not installing runtime dependency '{dep}'");
+                // trace!("Not installing runtime dependency '{dep}'");
                 continue;
             }
 
+            trace!("Installing dependency '{dep}' for '{self:-}'");
+
+            // Install all required dependencies
             dep.to_package()?
-                .install_inner(force, force, visited, suppress)?;
+                .install_inner(force, force, visited, suppress)
+                .permit(|e| matches!(e, InstallError::AlreadyInstalled))?;
         }
 
         Ok(())
