@@ -1,46 +1,33 @@
 use clap::Args;
+use futures::future::join_all;
+use permitit::Permit;
+use tracing::{
+    error,
+    warn,
+};
 
 use super::CommandError;
 use crate::{
     imply_all,
-    package::Package,
+    package::{
+        Package,
+        vf::VfCacheError,
+    },
 };
 
 #[derive(Args, Debug)]
 pub struct Command {
-    /// The package(s) to view
+    /// The package(s) to vf
     #[arg(value_name = "PACKAGE", num_args=0..)]
     pub packages: Vec<String>,
 
-    /// Level of detail, from 0 to 4
-    #[arg(
-        long,
-        short = 'l',
-        value_name = "LEVEL",
-        num_args = 1,
-        default_value_t = 0
-    )]
-    pub detail: u8,
-
-    /// Show dependencies
-    #[arg(long, short = 'd')]
-    pub dependencies: bool,
-
-    /// Show reverse dependencies
-    #[arg(long, short = 'D')]
-    pub dependants: bool,
-
-    /// Show deep dependencies
-    #[arg(long, short = '!')]
-    pub deep: bool,
-
-    /// Show messages
+    /// Only show outdated packages
     #[arg(long, short)]
-    pub messages: bool,
+    pub outdated_only: bool,
 
-    /// Pretty-print the package struct
-    #[arg(long, short = 'x')]
-    pub debug: bool,
+    /// Ignore the vf cache
+    #[arg(long, short)]
+    pub ignore_cache: bool,
 }
 
 impl Command {
@@ -50,33 +37,34 @@ impl Command {
             .map(|p| Package::from_s_file(p))
             .collect::<Result<_, _>>()?;
 
-        let pkgslen = pkgs.len();
-        for (i, pkg) in pkgs.iter().enumerate() {
-            if self.messages {
-                pkg.view_all_messages(pkgslen > 1);
-                continue
-            }
+        let tasks = pkgs
+            .iter()
+            .map(|p| {
+                let p_clone = p.clone();
+                let ic = self.ignore_cache;
+                tokio::spawn(async move { p_clone.vf(ic).await })
+            })
+            .collect::<Vec<_>>();
 
-            if self.dependencies {
-                if self.deep {
-                    pkg.view_deep_dependencies();
-                } else {
-                    pkg.view_dependencies();
-                }
-                continue
+        let mut vfs = Vec::new();
+        for res in join_all(tasks).await {
+            match res {
+                | Ok(Ok(vf)) => vfs.push(vf),
+                | Ok(_) => {},
+                | Err(e) => {
+                    error!("Task join error: {e}");
+                },
             }
+        }
 
-            if self.debug {
-                pkg.debug_view();
-                continue
-            }
-
-            pkg.view(self.detail);
-
-            // Formatting
-            if pkgslen > 1 && i != pkgslen - 1 && self.detail > 0 {
-                println!()
-            }
+        for vf in vfs {
+            vf.display();
+            if let Err(e) = vf
+                .cache()
+                .permit(|e| matches!(e, VfCacheError::NotRecaching))
+            {
+                warn!("Failed to cache vf '{vf:?}': {e}")
+            };
         }
 
         Ok(())
