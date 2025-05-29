@@ -43,7 +43,7 @@ async fn main() {
     init();
     if let Err(e) = cli::Cli::parse().run().await {
         error!("{e}");
-        // unravel!(e);
+        unravel!(e);
         exit(1)
     }
 }
