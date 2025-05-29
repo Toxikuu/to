@@ -61,7 +61,8 @@ WORKING ON IT. SOON I PROMISE.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
-- [ ] Make cli modular
+- [x] Make cli modular
+- [ ] Fix message formatting as visible in `tzdata`
 - [x] Don't install runtime dependencies to the build environment.
     - [x] There needs to be some way to check whether a package is being
     installed in the build environment. Use the existence of /D.
@@ -128,8 +129,10 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 - [ ] Add `to --version`
 - [x] Cache the output of `to vf`. This cache should reset every 4 hours, but
   should be overrideable by a flag.
+    - [ ] Add an option to use the cache, even if it's stale
 - [ ] Add to-specific data in /var/db/to/data/_/
-    - [ ] Have a file containing the number of installed packages
+    - [ ] Have a file containing the number of installed packages (not sure
+    about this one)
     - [ ] Have a file logging the current action (eg. building tree, installing
     popt, removing glibc)
     - [ ] Have a file logging the latest package actions (installs, updates,
@@ -141,3 +144,4 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 - [ ] Provide an official stage file. Ensure the presence of `zstd`. Also
   automatically install `to` to it. This stage file should be provided as a
   release asset.
+    - [ ] Make an LFStage profile for it
