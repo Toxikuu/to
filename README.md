@@ -61,6 +61,8 @@ WORKING ON IT. SOON I PROMISE.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
+- [x] Add --force for `to build`. Make the build not wanna build by default,
+only building if the pkgfile is newer than the distfile.
 - [x] Make cli modular
 - [ ] Fix message formatting as visible in `tzdata`
 - [x] Don't install runtime dependencies to the build environment.

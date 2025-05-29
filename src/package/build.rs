@@ -34,12 +34,14 @@ use crate::{
     CONFIG,
     exec,
     package::dep::DepKind,
+    utils::file::mtime,
 };
 
 // TODO: Make stagefile configurable
 const STAGEFILE: &str = "/var/tmp/lfstage/stages/lfstage3@2025-04-24_14-18-39.tar.xz";
 const MERGED: &str = "/var/lib/to/chroot/merged";
 
+#[rustfmt::skip]
 #[derive(Debug, Error)]
 pub enum BuildError {
     #[error("Failed to clean overlay")]
@@ -60,29 +62,43 @@ pub enum BuildError {
     #[error("Failed to build")]
     Build,
 
-    #[error("Failed QA checks")]
-    QA,
+    // TODO: Consider making exec!() return an exit code, and interpreting one as a QA failure
+    // #[error("Failed QA checks")]
+    // QA,
 
     #[error("Failed to cache")]
     Cache,
 
     #[error("Failed to save distfile")]
     SaveDistfile,
+
+    #[error("Shouldn't build")]
+    ShouldntBuild,
 }
 
 impl Package {
-    pub fn build(&self) -> Result<(), BuildError> {
+    pub fn build(&self, force: bool) -> Result<(), BuildError> {
+        // If we shouldn't build, and the build isn't forced, exit early
+        if !self.should_build() && !force {
+            return Err(BuildError::ShouldntBuild)
+        }
+
         clean_overlay()?;
         setup_overlay()?;
         self.fetch_sources()?;
         self.populate_overlay()?;
         self.pre_build_hook()?;
         self.chroot_and_run()?;
-        self.qa()?;
         self.cache_stuff()?;
         self.save_distfile()?;
 
         Ok(())
+    }
+
+    fn should_build(&self) -> bool {
+        let Some(pm) = mtime(self.pkgfile()) else { return true };
+        let Some(dm) = mtime(self.distfile()) else { return true };
+        pm > dm
     }
 
     fn pre_build_hook(&self) -> Result<(), BuildError> {

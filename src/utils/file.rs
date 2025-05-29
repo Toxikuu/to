@@ -7,7 +7,11 @@ use std::{
         self,
         Write,
     },
-    path::Path,
+    path::{
+        Path,
+        PathBuf,
+    },
+    time::SystemTime,
 };
 
 use fshelpers::mkdir_p;
@@ -143,3 +147,22 @@ where
 #[inline]
 // TODO: Move this somewhere more fitting. Organization is hard.
 pub fn exists(program: &str) -> bool { which::which(program).is_ok() }
+
+/// # Get a path's modtime
+///
+/// # Arguments
+/// * `path`        - The path to check.
+///
+/// # Returns `None` if:
+/// - The path doesn't exist, or could not be accessed
+///
+/// # Examples
+/// ```rust
+/// let modtime = mtime("/usr/bin/[").unwrap_or(SystemTime::UNIX_EPOCH); 
+/// ```
+pub fn mtime<P: AsRef<Path>>(path: P) -> Option<SystemTime> {
+    path.as_ref()
+        .metadata()
+        .ok()
+        .and_then(|m| m.modified().ok())
+}
