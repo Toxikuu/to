@@ -129,8 +129,8 @@ pub fn exec_interactive(command: &str) -> io::Result<()> {
 
 fn prepend_source_base(command: &str) -> String {
     format!(
-        r#"TO_CFLAGS="{}" TO_JOBS="{}" source /usr/share/to/envs/base.env ; {command}"#,
-        CONFIG.cflags, CONFIG.jobs
+        r#"CFLAGS="{}" MAKEFLAGS="{}" source /usr/share/to/envs/base.env ; {command}"#,
+        CONFIG.cflags, CONFIG.makeflags,
     )
 }
 

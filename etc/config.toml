@@ -1,7 +1,8 @@
 log_level = "trace"
 tests = true
 strip = true
-# jobs = 16
+makeflags = "-j16"
+stagefile = "/var/cache/lfstage/profiles/to/stages/lfstage-to-2025-05-29_21-38-06.tar.xz"
 cflags = "-march=native -O2 -pipe"
 server_address = "http://127.0.0.1:7020"
 package_repo = "https://github.com/Toxikuu/to-pkgs.git"

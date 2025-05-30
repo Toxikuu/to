@@ -36,7 +36,6 @@ use crate::{
 };
 
 // TODO: Make stagefile configurable
-const STAGEFILE: &str = "/var/tmp/lfstage/stages/lfstage3@2025-04-24_14-18-39.tar.xz";
 const MERGED: &str = "/var/lib/to/chroot/merged";
 
 #[rustfmt::skip]
@@ -230,22 +229,22 @@ impl Package {
     }
 
     fn chroot_and_run(&self) -> Result<(), BuildError> {
-        let strip = CONFIG.strip;
-        let tests = CONFIG.tests;
-        let cflags = &CONFIG.cflags;
-        let jobs = &CONFIG.jobs;
-
         info!("Entering chroot for {self}");
         exec!(
             r#"
         chroot {MERGED} \
             /usr/bin/env -i             \
-                TO_CFLAGS="{cflags}"    \
-                TO_JOBS={jobs}          \
+                MAKEFLAGS="{makeflags}" \
+                CXXFLAGS="{cflags}"     \
+                CFLAGS="{cflags}"       \
                 TO_STRIP={strip}        \
                 TO_TEST={tests}         \
             /runner
-        "#
+        "#,
+            makeflags = &CONFIG.makeflags,
+            cflags = &CONFIG.cflags,
+            strip = CONFIG.strip,
+            tests = CONFIG.tests,
         )
         .map_err(|_| BuildError::Build)
     }
@@ -334,7 +333,7 @@ fn setup_overlay() -> Result<(), BuildError> {
 
         # extract the stage3 if it's absent
         if [ ! -d lower/usr ]; then 
-            tar xpf {STAGEFILE} -C lower
+            tar xpf {stagefile} -C lower
         fi
 
         mount -vt overlay overlay -o lowerdir=lower,upperdir=upper,workdir=work merged
@@ -343,7 +342,8 @@ fn setup_overlay() -> Result<(), BuildError> {
         mount -vt proc proc merged/proc
         mount -vt sysfs sysfs merged/sys
         mount -vt tmpfs tmpfs merged/run
-        "#
+        "#,
+        stagefile = CONFIG.stagefile,
     )
     .map_err(|_| BuildError::SetupOverlay)
 }
