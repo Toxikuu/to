@@ -73,4 +73,4 @@ endif
 uninstall:
 	rm -f $(DESTDIR)/usr/bin/to
 	rm -rf $(DESTDIR)/usr/share/to
-	@echo "You may also want to remove $(DESTDIR)/etc/to and $(DESTDIR)/var/cache/to"
+	@echo "You may also want to remove $(DESTDIR)/etc/to, $(DESTDIR)/var/cache/to, and $(DESTDIR)/var/db/to"
