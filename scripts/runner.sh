@@ -4,6 +4,27 @@ set -euo pipefail
 # This gets executed in the chroot
 
 
+# Hold the user's hand
+# TODO: Explain at a high level how the overlay file system works, and how `to` takes advantage of it, and how any files always wanted in the build chroot should be installed to lower
+# TODO: Explain that `umount -vR /var/lib/to/chroot/merged && rm -rf /var/lib/to/chroot` may be executed to start fresh from the stagefile
+# TODO: Cover those in mdbook documentation probably
+if [ ! -e /usr/share/to/envs/base.env ]; then
+    cat << 'EOF' >&2
+
+    ERROR: Missing base environment
+    You most likely haven't installed `to` to the build chroot
+    You may do so by navigating to the `to` source directory and executing the following command:
+
+    sudo make DESTDIR=/var/lib/to/chroot/lower install
+
+    Rerun that command whenever `to` is updated
+    There will probably be a better way to do this in the future
+
+EOF
+    exit 9
+fi
+
+
 # Source stuff
 source /usr/share/to/envs/base.env
 source /pkg
