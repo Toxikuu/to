@@ -61,6 +61,10 @@ WORKING ON IT. SOON I PROMISE.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
+- [ ] Instead of sprinkling `laway` throughout my build scripts, include it in a
+post-build steps system that runs before QA. This system should be similar to
+QA. Probably call it opts. Move strip into opts. Should allow for stuff like
+opts=(!strip !la)
 - [x] Add --force for `to build`. Make the build not wanna build by default,
 only building if the pkgfile is newer than the distfile.
 - [x] Make cli modular
@@ -114,12 +118,12 @@ only building if the pkgfile is newer than the distfile.
         - [ ] Update the alias thing does matter, but only for deep
         dependencies. Not sure how I plan to work around this ngl.
 - [x] Add post-build QA checks
-     - [ ] Make them less shit
-        - [ ] Make them modular
-        - [ ] Add a check for static libraries, and libtool archives
+     - [x] Make them less shit
+        - [x] Make them modular
+        - [x] Add a check for static libraries, and libtool archives
         - [ ] Add a check for missing pc files, bin, lib, etc.
-        - [ ] Add e.g. 'qa=(!static)' support to the pkg parser
-            - [ ] Allow qa checks to be toggled on or off
+        - [x] Add e.g. 'qa=(!static)' support to the pkg parser
+            - [x] Allow qa checks to be toggled on or off
 - [x] Add `--debug` for `to view`, and change the default behavior to give
       something human readable.
 - [x] Add `to alias`
@@ -141,9 +145,7 @@ only building if the pkgfile is newer than the distfile.
     removals, etc.)
 - [x] Drop c_c in base.env because it's very flaky
     - [ ] Fix associated build failures
-<!-- - [ ] Record configure options to /var/db/to/data/$n/cfg. This would be done by -->
-<!--   packaging /_cfg into the tarball, similar to MANIFEST. -->
-- [ ] Provide an official stage file. Ensure the presence of `zstd`. Also
-  automatically install `to` to it. This stage file should be provided as a
-  release asset.
-    - [ ] Make an LFStage profile for it
+- [ ] Stop writing configure options to _cfg
+- [ ] Provide an official stage file. Ensure the presence of `zstd`.
+    - [x] Make an LFStage profile for it
+    - [ ] Once `to` is relatively stable, install it to the stagefile profile
