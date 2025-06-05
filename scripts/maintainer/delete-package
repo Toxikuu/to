@@ -21,7 +21,7 @@ rm -rvf "${n:?}"
 
 if [ -z "$(git status -s "$n")" ]; then
     echo "No changes made"
-    return 0
+    exit 0
 fi
 
 git rm -r "$n"
