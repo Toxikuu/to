@@ -59,11 +59,14 @@ impl Package {
         &self,
         force: bool,
         full_force: bool,
-        visited: &mut HashSet<String>,
+        visited: &mut HashSet<String>, // cheaper to clone than `Package`
         suppress: bool,
     ) -> Result<(), InstallError> {
-        if !visited.insert(self.to_string()) {
-            // Avoid pesky infinite recursion
+        // Make `full_force` imply `force`
+        let force = full_force || force;
+
+        if !visited.insert(self.name.to_owned()) {
+            // Avoid aforementioned pesky infinite recursion
             return Ok(());
         }
 
@@ -89,10 +92,16 @@ impl Package {
         }
 
         // Only install runtime dependencies if we aren't in the build environment
-        let in_chroot = in_build_environment();
-        self.install_deps(full_force, !in_chroot, visited, in_chroot)
-            .permit(|e| matches!(e, InstallError::AlreadyInstalled))
-            .map_err(|e| InstallError::Dependencies(Box::new(e)))?;
+        let deps = self.collect_install_deps();
+        for dep in deps {
+            dep.install_inner(full_force, full_force, visited, suppress)
+                .permit(|e| matches!(e, InstallError::AlreadyInstalled))
+                .map_err(|e| InstallError::Dependencies(Box::new(e)))?
+        }
+
+        // self.install_deps(full_force, !in_chroot, visited, in_chroot)
+        //     .permit(|e| matches!(e, InstallError::AlreadyInstalled))
+        //     .map_err(|e| InstallError::Dependencies(Box::new(e)))?;
 
         let data = &self.datadir();
         let iv = data.join("IV");
@@ -157,8 +166,17 @@ impl Package {
         Ok(())
     }
 
-    /// Install a package
-    /// Calls `install_deps()` under the hood
+    /// # Install a package, ignoring the case where it's already installed
+    ///
+    /// Wraps `install_inner()`
+    ///
+    /// # Arguments
+    /// * `force`       - Whether the package should be forcibly (re)installed
+    /// * `full_force`  - Whether all dependencies should be forcible (re)installed
+    /// * `suppress`    - Whether to suppress messages
+    ///
+    /// # Errors
+    /// TODO
     #[instrument(skip(self, force))]
     pub fn install(
         &self,

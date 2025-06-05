@@ -1,7 +1,6 @@
 // package/build.rs
 
 use std::{
-    collections::HashSet,
     fs::{
         copy,
         write,
@@ -31,7 +30,7 @@ use super::{
 use crate::{
     CONFIG,
     exec,
-    package::dep::DepKind,
+    package::FormError,
     utils::file::mtime,
 };
 
@@ -59,9 +58,8 @@ pub enum BuildError {
     #[error("Failed to build")]
     Build,
 
-    // TODO: Consider making exec!() return an exit code, and interpreting one as a QA failure
-    // #[error("Failed QA checks")]
-    // QA,
+    #[error("Failed to resolve dependencies")]
+    ResolveDeps(#[from] FormError),
 
     #[error("Failed to cache")]
     Cache,
@@ -159,7 +157,7 @@ impl Package {
         }
 
         for source in &self.sources {
-            trace!("Copying over source {source:?}");
+            // trace!("Copying over source {source:?}");
             let source_path = source.path(self);
             let source_dest = Path::new(MERGED).join("S").join(&source.dest);
 
@@ -171,39 +169,18 @@ impl Package {
             }
         }
 
-        // Resolve only needed dependencies
-        //
-        // The idea is to resolve the shallow build dependencies, so extraneous deep build
-        // dependencies aren't present in the chroot.
-        //
-        // We first find all the required deep dependencies, then tack on all the shallow build
-        // dependencies. The pkgfile, sfile, and distfile for each dependency is then copied over
-        // to the build environment. A HashSet is used for extra deduplication.
-        let mut deps = self
-            .resolve_deps(|k| matches!(k, DepKind::Required))
-            .into_iter()
-            .collect::<HashSet<_>>();
-
-        // TODO: Only add build dependencies if they're not already in the hashset; "b,glibc" and
-        // "glibc" would be deduplicated this way.
-        deps.extend(
-            self.dependencies
-                .iter()
-                .filter(|d| d.kind == DepKind::Build)
-                .map(|d| d.to_package().expect("Failed to form package for dep")),
-        );
+        let deps = self.collect_chroot_deps()?;
 
         #[rustfmt::skip]
         // TODO: Copy aliases as well
         for dep in &deps {
-            copy_to_chroot(dep.distfile())
-                .map_err(|_| BuildError::PopulateOverlay)?; // missing distfile (probably)
-            copy_to_chroot(dep.pkgfile())
-                .map_err(|_| BuildError::PopulateOverlay)?; // missing pkgfile (probably)
-            copy_to_chroot(dep.sfile())
-                .map_err(|_| BuildError::PopulateOverlay)?; // missing sfile (probably)
+            let files = [dep.distfile(), dep.pkgfile(), dep.sfile()];
+            for file in files {
+                copy_to_chroot(file)
+                    .map_err(|_| BuildError::PopulateOverlay)?;
+            }
 
-            trace!("Copied over dependency {dep:-}")
+            // trace!("Copied over dependency {dep:-}")
         }
 
         // Write chroot/deps
@@ -388,7 +365,9 @@ mod test {
         // Ensure all dependency packages have `depkind` and confirm `is_dependency()` works
         assert!(deps.iter().all(|d| d.is_dependency()));
 
-        // Print out all dependency information
-        eprintln!("{:#?}", &deps);
+        // Print stuff out
+        for dep in deps {
+            eprintln!("{:+}", dep.to_dep().unwrap())
+        }
     }
 }
