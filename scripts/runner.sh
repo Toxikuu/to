@@ -75,8 +75,6 @@ readarray -t dirs < <(find . -mindepth 1 -maxdepth 1 -type d)
 if [ "${#dirs[@]}" -eq 1 ]; then
     cd "$dirs"
     echo "Entered source directory '$dirs' (only)"
-else
-    die "Multiple source directories. Specify which in \`b()\`."
 fi
 
 
@@ -89,16 +87,21 @@ else
 fi
 
 
+# Run opts
+echo "Running opts"
+/usr/share/to/scripts/opts/run
+
+
+# Run QA checks
+echo "Running QA checks"
+/usr/share/to/scripts/qa/run
+
+
 # Execute tests if enabled
 if is_function t && $TO_TEST; then
     echo "Executing test instructions"
     t
 fi
-
-
-# Run QA checks
-echo "Running QA checks"
-/usr/share/to/scripts/qa/qa.sh
 
 
 # Check if anything is in $D
