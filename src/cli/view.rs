@@ -66,6 +66,16 @@ impl Command {
                 continue
             }
 
+            if self.dependants {
+                if self.deep {
+                    todo!("Deep dependants");
+                } else {
+                    todo!("Dependants");
+                }
+                #[allow(unreachable_code)] // stop `todo!()`s from complaining
+                continue
+            }
+
             if self.debug {
                 pkg.debug_view();
                 continue

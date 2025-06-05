@@ -44,10 +44,7 @@ use crate::{
         },
     },
     sex,
-    utils::{
-        commit_hash,
-        parse::us_array,
-    },
+    utils::parse::us_array,
 };
 
 #[derive(Error, Debug)]
@@ -57,6 +54,9 @@ pub enum FormError {
 
     #[error("Failed to deserialize package")]
     Deserialization(#[from] serde_json::Error),
+
+    #[error("Missing metadata")]
+    MissingMetadata(String),
 }
 
 /// # The package struct for `to`.
@@ -178,28 +178,37 @@ impl Package {
 /// See the documentation for `Package`
 impl fmt::Display for Package {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use crate::utils::commit_hash::try_shorten;
+
         if f.sign_minus() {
-            write!(
-                f,
-                "{}@{}",
-                self.name,
-                commit_hash::try_shorten(&self.version)
-            )
+            write!(f, "{}@{}", self.name, try_shorten(&self.version))
         } else if f.sign_plus() {
+            // WARN: This branch ({package:+} formatting) is very subject to change
             if !self.is_installed() {
-                write!(f, "  \x1b[30;1m{}@{}\x1b[0m", self.name, self.version)
+                write!(
+                    f,
+                    "  \x1b[30;1m{}@{}\x1b[0m",
+                    self.name,
+                    try_shorten(&self.version)
+                )
             } else if self.is_current() {
-                write!(f, "  \x1b[32;1m{}@{}\x1b[0m", self.name, self.version)
+                write!(
+                    f,
+                    "  \x1b[32;1m{}@{}\x1b[0m",
+                    self.name,
+                    try_shorten(&self.version)
+                )
             } else {
-                // WARN: This branch ({package:+} formatting) is very subject to change
                 write!(
                     f,
                     "  \x1b[31;1m{}@{iv} -> {}\x1b[0m",
                     self.name,
-                    self.version,
-                    iv = self
-                        .installed_version()
-                        .expect("Package is installed but iv not found")
+                    try_shorten(&self.version),
+                    iv = try_shorten(
+                        &self
+                            .installed_version()
+                            .expect("Package is installed but iv not found")
+                    )
                 )
             }
         } else {

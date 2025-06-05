@@ -85,7 +85,9 @@ impl Package {
         println!("󰪴 \x1b[1mDependencies:\x1b[0m");
         for dep in deps {
             if let Ok(d) = dep.to_package() {
-                d.view(0);
+                let kind = dep.kind;
+                let dep = format!("{d:+}");
+                println!("{dep:<48} ({kind})");
             } else {
                 error!("Failed to form package from dependency: {dep}")
             }
@@ -99,10 +101,11 @@ impl Package {
             return;
         }
 
-        // TODO: Use Dep From Package to display depkind too
         println!("󰪴 \x1b[1mDeep dependencies:\x1b[0m");
         for dep in deps {
-            dep.view(0)
+            let kind = dep.depkind.unwrap();
+            let dep = format!("{dep:+}");
+            println!("{dep:<48} ({kind})");
         }
     }
 
