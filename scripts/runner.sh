@@ -78,6 +78,19 @@ if [ "${#dirs[@]}" -eq 1 ]; then
 fi
 
 
+# Infer environments from dependencies if unspecified
+# Only supported for (one of):
+# * meson (and samu/ninja)
+# * cmake (and samu/ninja)
+if ! type b | grep 'with'; then
+    if [[ ${d[*]} =~ "meson" ]]; then
+        with meson
+    elif [[ ${d[*]} =~ "cmake" ]]; then
+        with cmake
+    fi
+fi
+
+
 # Execute build
 if is_function b; then
     echo "Executing build instructions"
