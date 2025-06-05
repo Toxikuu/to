@@ -9,6 +9,7 @@ declare -A QA=(
     [emptydestdir]=on
     [usrlocal]=on
     [la]=on
+    [pc]=on
     [static]=on
 )
 
