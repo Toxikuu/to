@@ -7,6 +7,11 @@ GIT_REPO   ?= https://github.com/Toxikuu/to-pkgs.git
 
 all: build
 
+check:
+	cargo nextest run
+
+test: check
+
 build:
 ifeq ($(ENABLE_TOOLS),1)
 	@echo "Building to with tools..."
