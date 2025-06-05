@@ -1,24 +1,27 @@
 -include config.mk
+.PHONY: all check test clean build install uninstall
 
 # TODO: Make the configure flags actually do stuff
 
 GIT_BRANCH ?= master
 GIT_REPO   ?= https://github.com/Toxikuu/to-pkgs.git
+VERSION    ?= $(shell ./version.sh)
 
 all: build
 
 check:
-	cargo nextest run
+	checkmake Makefile
+	VERSION=TEST cargo nextest run
 
 test: check
 
 build:
 ifeq ($(ENABLE_TOOLS),1)
 	@echo "Building to with tools..."
-	cargo +nightly build --release
+	VERSION=$(VERSION) cargo +nightly build --release
 else
 	@echo "Building to..."
-	cargo +nightly build --release --no-default-features
+	VERSION=$(VERSION) cargo +nightly build --release --no-default-features
 endif
 
 clean:

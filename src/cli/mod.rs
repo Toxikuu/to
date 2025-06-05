@@ -49,7 +49,13 @@ use crate::{
 };
 
 #[derive(Debug, Parser)]
-#[command(name = "to", version, author, about)]
+#[command(
+    name = env!("CARGO_PKG_NAME"),
+    version = env!("TO_VERSION"),
+    author,
+    about,
+    infer_subcommands = true,
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
