@@ -7,10 +7,7 @@ use std::{
         self,
         Write,
     },
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::Path,
     time::SystemTime,
 };
 
