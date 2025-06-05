@@ -93,12 +93,13 @@ impl Package {
     }
 
     pub fn view_deep_dependencies(&self) {
-        let deps = &self.resolve_deps();
+        let deps = &self.resolve_deps(|_| true);
         if deps.is_empty() {
             println!("No dependencies for {self}");
             return;
         }
 
+        // TODO: Use Dep From Package to display depkind too
         println!("󰪴 \x1b[1mDeep dependencies:\x1b[0m");
         for dep in deps {
             dep.view(0)
@@ -108,7 +109,7 @@ impl Package {
     pub fn debug_view(&self) {
         println!("{self:#?}");
 
-        let deps = &self.resolve_deps();
+        let deps = &self.resolve_deps(|_| true);
         println!("\nDeep dependencies:");
         for dep in deps {
             println!(" - {dep}");

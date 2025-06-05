@@ -81,19 +81,45 @@ impl Dep {
     }
 }
 
+// TODO: Refactoring idea: Add a DepFilter trait. Impl it for bool, DepKind, and closures. This
+// would allow calling `resolve_deps()` like any of:
+// * `resolve_deps(true)`
+// * `resolve_deps(DepKind::Required)`
+// * `resolve_deps(|k| !matches!(k, DepKind::Runtime)`
+// Not certain if I want to do this because it would in ways simplify and complicate the API, while
+// making this codebase even messier.
 impl Package {
-    #[instrument(skip(self, resolved, seen, order), level = "trace")]
+    /// # Finds deep dependencies for a package, with a filter
+    ///
+    /// This function serves as the backend for `resolve_deps()` and should not be called on its
+    /// own.
+    ///
+    /// # Arguments
+    /// * `resolved`        - A collection of already-resolved dependencies
+    /// * `seen`            - A collection of packages whose dependencies have been resolved
+    /// * `order`           - The dependency resolution order
+    /// * `filter`          - The filter to apply to dependency resolution
+    ///
+    /// # Returns
+    /// Mutates the `resolved` argument.
+    #[instrument(skip(self, resolved, seen, order, filter), level = "trace")]
     fn deep_deps(
         &self,
         resolved: &mut HashSet<Dep>,
         seen: &mut HashSet<Package>,
         order: &mut Vec<Package>,
+        filter: impl Fn(DepKind) -> bool + Copy,
     ) {
         for dep in &self.dependencies {
+            if !filter(dep.kind) {
+                trace!("Skipping {dep} per filter");
+                continue;
+            }
+
             if resolved.insert(dep.clone()) {
                 dep.to_package()
                     .expect("Failed to form dependency package")
-                    .deep_deps(resolved, seen, order);
+                    .deep_deps(resolved, seen, order, filter);
             }
         }
 
@@ -103,19 +129,49 @@ impl Package {
         }
     }
 
-    #[instrument(skip(self), level = "debug")]
-    pub fn resolve_deps(&self) -> Vec<Package> {
+    // TODO: [WIP: testing needed] Probably fucking rewrite all the dependency resolution logic so
+    // as not to not pull in required dependencies for runtime dependencies. This is hopefully
+    // fixed by adding resolution filtering.
+    //
+    // TODO: Test dependency resolution filtering. It passes all tests, but whether it works in
+    // practice is yet to be seen.
+    //
+    // This could probably be done by introducing dependency filtering in this function and in
+    // `deep_deps()`.
+    /// # Resolves deep dependencies, with a filter
+    ///
+    /// This function wraps `deep_deps()`, and ensures the package is not a dependency of itself
+    /// (`find -mindepth 1` kinda filtering).
+    ///
+    /// # Arguments
+    /// * `filter`          - The filter to apply to dependecy resolution
+    ///
+    /// # Returns
+    /// Notably returns a `Vec<Package>` instead of `Vec<Dep>`. This is done for reasons; ifykyk.
+    ///
+    /// # Examples
+    /// ```rust
+    /// // Resolve all deps except runtime deps
+    /// let most_deps = pkg.resolve_deps(|k| !matches!(k, DepKind::Runtime));
+    ///
+    /// // Resolve all deps
+    /// // A filter
+    /// let all_deps = pkg.resolve_deps(|_| true);
+    /// ```
+    #[instrument(skip(self, filter), level = "debug")]
+    pub fn resolve_deps(&self, filter: impl Fn(DepKind) -> bool + Copy) -> Vec<Package> {
         debug!("Resolving dependencies for {self:-}");
         let mut resolved = HashSet::new();
         let mut seen = HashSet::new();
         let mut order = Vec::new();
-        self.deep_deps(&mut resolved, &mut seen, &mut order);
 
+        self.deep_deps(&mut resolved, &mut seen, &mut order, filter);
         order.retain(|d| d.name != self.name);
 
         trace!("Resolved dependencies for {self:-}:");
         for dep in &order {
             trace!(" - {dep} ({})", dep.depkind.unwrap());
+            // TODO: impl From Package for Dep and use Display ^
         }
 
         order
@@ -182,10 +238,24 @@ mod test {
     fn make_ca_runtime_of_self() {
         let pkg = Package::from_s_file("make-ca").unwrap();
 
-        let all_deps = pkg.resolve_deps();
+        let all_deps = pkg.resolve_deps(|_| true); // pull all dependencies
         dbg!(&all_deps);
 
         assert!(all_deps.iter().all(|d| d.name != "make-ca"))
+    }
+
+    #[test]
+    /// Elogind depends on polkit as a runtime dependency. Polkit has glib listed as a required
+    /// dependency. Confirm that glib is no longer pulled in.
+    fn elogind_runtime_required() {
+        let pkg = Package::from_s_file("elogind").unwrap();
+
+        let all_deps = pkg.resolve_deps(|k| !matches!(k, DepKind::Runtime));
+        dbg!(&all_deps);
+
+        assert!(all_deps.iter().any(|d| d.name == "acl"));
+        assert!(all_deps.iter().all(|d| d.name != "polkit")); // test shallow filtering
+        assert!(all_deps.iter().all(|d| d.name != "glib")); // test deep filtering
     }
 
     #[test]
@@ -197,7 +267,7 @@ mod test {
     fn rust_make_ca_dep() {
         let pkg = Package::from_s_file("rust").unwrap();
 
-        let all_deps = pkg.resolve_deps();
+        let all_deps = pkg.resolve_deps(|_| true);
         eprintln!("Deps:");
         for dep in &all_deps {
             eprintln!("{:>16} ({})", dep.name, dep.depkind.unwrap())

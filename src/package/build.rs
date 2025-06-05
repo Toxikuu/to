@@ -179,15 +179,13 @@ impl Package {
         // We first find all the required deep dependencies, then tack on all the shallow build
         // dependencies. The pkgfile, sfile, and distfile for each dependency is then copied over
         // to the build environment. A HashSet is used for extra deduplication.
-        //
-        // TODO: Maybe only add build dependencies if they're not already in the hashset; "b,glibc"
-        // and "glibc" would be deduplicated this way.
         let mut deps = self
-            .resolve_deps()
+            .resolve_deps(|k| matches!(k, DepKind::Required))
             .into_iter()
-            .filter(|d| d.depkind.expect("Dep should have a kind") == DepKind::Required)
             .collect::<HashSet<_>>();
 
+        // TODO: Only add build dependencies if they're not already in the hashset; "b,glibc" and
+        // "glibc" would be deduplicated this way.
         deps.extend(
             self.dependencies
                 .iter()
@@ -378,7 +376,9 @@ mod test {
     #[test]
     fn depression() {
         // The xorg-server package is chosen since it has all sorts of dependencies
-        let deps = Package::from_s_file("xorg-server").unwrap().resolve_deps();
+        let deps = Package::from_s_file("xorg-server")
+            .unwrap()
+            .resolve_deps(|_| true);
 
         // Ensure dependency information is maintained
         assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Required));
