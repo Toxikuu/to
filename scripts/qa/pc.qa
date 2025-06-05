@@ -1,0 +1,27 @@
+#!/usr/bin/bash
+
+# Could be refactored to account for spaces in filenames but idk any packages
+# that do that
+set -euo pipefail
+
+# Gather pkgconfig files from "$D"/usr/{lib,share}/pkgconfig
+pcs=()
+for dir in "$D"/usr/{lib,share}/pkgconfig; do
+    if [[ -d "$dir" ]]; then
+        pcs+=("$(find "$dir" -type f -name '*.pc')")
+    fi
+done
+
+# Ensure they don't reference libtool archives
+trouble=0
+for pc in "${pcs[@]}"; do
+    if grep -q '\.la' "$pc"; then
+        echo "Package config file '$pc' references a libtool archive" >&2
+        trouble=1
+    fi
+done
+
+# Verdict
+if [ "$trouble" -ne 0 ]; then
+    exit 1
+fi
