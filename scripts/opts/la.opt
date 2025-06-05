@@ -1,0 +1,6 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+readarray -t las < <(find "$D" -type f -name '*.la')
+rm -vf "${las[@]}"

@@ -1,0 +1,46 @@
+#!/usr/bin/bash
+set -euo pipefail
+
+. /pkg || die "Failed to source /pkg"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+# Define opts and their default states
+declare -A OPTS=(
+    [la]=on         # delete libtool archives
+)
+
+
+# Helper function to check if a given opt key exists
+is_key() {
+    [[ -v OPTS["$1"] ]]
+}
+
+
+for opt in ${opts:-}; do
+    if [[ $opt == '!'* ]]; then
+        key="${opt:1}"
+        is_key "$key" || die "Unknown opt: $key"
+        OPTS["$key"]=off
+    elif [[ $opt == * ]]; then
+        key="${opt:1}"
+        is_key "$key" || die "Unknown opt: $key"
+        OPTS["$key"]=on
+    fi
+done
+
+
+for k in "${!OPTS[@]}"; do
+    v="${OPTS[$k]}"
+    if [[ $v == on ]]; then
+        printf "OPTS: %-14s ... " "$k"
+        if "$SCRIPT_DIR/$k.opt"; then
+            echo "OK"
+        else
+            echo -e "\x1b[31;1mERROR\x1b[0m"
+            die "Failed to execute option '$k'"
+        fi
+    else
+        printf "OPTS: %-14s ... " "$k"
+        echo "SKIP"
+    fi
+done
