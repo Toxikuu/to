@@ -5,6 +5,7 @@ use std::{
         copy,
         write,
     },
+    os::unix::fs,
     path::{
         Path,
         PathBuf,
@@ -32,7 +33,10 @@ use super::{
 use crate::{
     CONFIG,
     exec,
-    package::FormError,
+    package::{
+        FormError,
+        alias::gather_all_aliases,
+    },
     utils::file::mtime,
 };
 
@@ -177,12 +181,38 @@ impl Package {
         let deps = self.collect_chroot_deps()?;
 
         #[rustfmt::skip]
-        // TODO: Copy aliases as well
         for dep in &deps {
             let files = [dep.distfile(), dep.pkgfile(), dep.sfile()];
             for file in files {
                 copy_to_chroot(file)
                     .map_err(|_| BuildError::PopulateOverlay)?;
+            }
+
+            debug_assert!(gather_all_aliases().len() > 10);
+
+            // Replicate alias structure in chroot
+            let alias_paths = dep.alias_pkgdirs();
+            trace!("Aliases for {dep:-}: {alias_paths:#?}");
+
+            #[cfg(debug_assertions)]
+            if &dep.name == "ogg" {
+                assert!(Package::from_s_file("ogg").unwrap().find_aliases().iter().any(|a| a.name == "libogg"));
+
+                assert_eq!(Package::from_s_file("ogg").unwrap().find_aliases(), dep.find_aliases());
+                assert!(dep.find_aliases().iter().any(|a| a.name == "libogg"));
+
+                dbg!(&alias_paths);
+                debug_assert!(alias_paths.contains(&PathBuf::from("/var/db/to/pkgs/libogg")));
+            }
+
+            for alias_path in alias_paths {
+                let symlink = Path::new(MERGED).join(alias_path.strip_prefix("/").expect("Alias path should be absolute"));
+                debug!("Symlinking '{}' -> '{}'", symlink.display(), &dep.name);
+
+                fs::symlink(&dep.name, &symlink).map_err(|_| BuildError::PopulateOverlay)
+                    .permit_if(alias_path.read_link().map(|p| p.to_string_lossy() == dep.name).unwrap_or(false))?;
+                debug_assert_eq!(symlink, Path::new(MERGED).join("var/db/to/pkgs").join(alias_path.file_name().unwrap()));
+                debug_assert_eq!(symlink.read_link().unwrap(), PathBuf::from(&dep.name));
             }
 
             // trace!("Copied over dependency {dep:-}")
