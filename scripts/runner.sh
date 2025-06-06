@@ -80,10 +80,10 @@ fi
 
 # Infer environments from dependencies if unspecified
 # Only supported for (one of):
-# * meson (and samu/ninja)
-# * cmake (and samu/ninja)
-if ! type b | grep 'with'; then
-    if [[ ${d[*]} =~ "meson" ]]; then
+# * meson/muon  (with samu/ninja)
+# * cmake       (with samu/ninja)
+if ! type b | grep -q 'with'; then
+    if [[ ${d[*]} =~ "meson" ]] || [[ "${d[*]}" =~ "muon" ]]; then
         with meson
     elif [[ ${d[*]} =~ "cmake" ]]; then
         with cmake
