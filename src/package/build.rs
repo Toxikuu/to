@@ -14,7 +14,9 @@ use std::{
 use fshelpers::{
     mkdir_p,
     mkf_p,
+    rmdir_r,
 };
+use permitit::Permit;
 use thiserror::Error;
 use tracing::{
     debug,
@@ -119,10 +121,13 @@ impl Package {
         info!("Populating overlay for {name}");
         // TODO: Consider dropping `/etc/to/exclude` support
         // - Not sure if I wanna do this because I already wrote and used `il()` :shrug:
+        for path in ["B", "D", "S", "etc/to"] {
+            mkdir_p(Path::new(MERGED).join(path)).map_err(|_| BuildError::PopulateOverlay)?
+        }
+
         exec!(
             r#"
             cd {MERGED}
-            mkdir -pv B D S etc/to
 
             cp -vf {}                               pkg     # copy pkg file
             cp -vf /usr/share/to/scripts/runner.sh  runner  # copy runner
@@ -324,21 +329,25 @@ fn setup_overlay() -> Result<(), BuildError> {
 }
 
 fn clean_overlay() -> Result<(), BuildError> {
+    let chroot = Path::new("/var/lib/to/chroot");
+    mkdir_p(chroot).map_err(|_| BuildError::SetupOverlay)?;
+
     exec!(
         r#"
-        mkdir -pv /var/lib/to/chroot
-        cd        /var/lib/to/chroot
-
-        mkdir -pv lower merged upper work
-
-        if mountpoint -q merged; then
-            umount -lR merged
+        if mountpoint -q {chroot}/merged; then
+            umount -lR {chroot}/merged
         fi
-
-        rm -rf upper/* work/*
-        "#
+        "#,
+        chroot = chroot.display(),
     )
     .map_err(|_| BuildError::CleanOverlay)?;
+
+    rmdir_r(chroot.join("upper")).map_err(|_| BuildError::CleanOverlay)?;
+    rmdir_r(chroot.join("work")).map_err(|_| BuildError::CleanOverlay)?;
+
+    for dir in ["lower", "merged", "upper", "work"] {
+        mkdir_p(chroot.join(dir)).map_err(|_| BuildError::SetupOverlay)?;
+    }
 
     Ok(())
 }

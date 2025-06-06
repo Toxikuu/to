@@ -2,9 +2,14 @@
 
 use std::{
     collections::HashSet,
+    fs,
     path::Path,
 };
 
+use fshelpers::{
+    mkdir_p,
+    mkf_p,
+};
 use once_cell::sync::Lazy;
 use permitit::Permit;
 use thiserror::Error;
@@ -50,6 +55,9 @@ pub enum InstallError {
 
     #[error("Failed to execute install command")]
     Execution,
+
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 impl Package {
@@ -108,18 +116,18 @@ impl Package {
         let manifest = data.join(format!("MANIFEST@{version}"));
         let pkgfile = &self.pkgfile();
 
+        mkdir_p(data)?;
+        mkf_p("/etc/to/exclude")?; // prevent tar from complaining
         exec!(
             r#"
 
         set -euo pipefail
         source {pkgfile:?}
-        mkdir -pv {data:?}
 
         if is_function prei; then
             prei
         fi
 
-        touch /etc/to/exclude
         tar xvf '{dist_str}' -C /           \
             --keep-directory-symlink        \
             --numeric-owner                 \
@@ -131,8 +139,6 @@ impl Package {
             -e 's,/$,,'     |
         tee > {manifest:?}
 
-        echo '{version}' > {iv:?}
-
         if is_function posti; then
             posti
         elif is_function i; then
@@ -143,6 +149,7 @@ impl Package {
         )
         .map_err(|_| InstallError::Execution)?;
 
+        fs::write(iv, version)?;
         info!("Installed {self:-}");
 
         // Do some other stuff if updating
