@@ -8,7 +8,8 @@ set -euo pipefail
 pcs=()
 for dir in "$D"/usr/{lib,share}/pkgconfig; do
     if [[ -d "$dir" ]]; then
-        pcs+=("$(find "$dir" -type f -name '*.pc')")
+        # shellcheck disable=2207
+        pcs+=($(find "$dir" -type f -name '*.pc'))
     fi
 done
 
