@@ -1,7 +1,7 @@
 # To
 
-<!-- TODO: update the below line when I'm comfortable with the state of matter of
-this project -->
+<!-- TODO: update the below line when I'm comfortable with the state of this
+           project -->
 **Stupid-simple, rock-solid (EVENTUALLY CURRENTLY WIP AND NOT SOLID AT ALL DO
 NOT USE HERE BE DRAGONS) package manager for LFS**
 
@@ -18,7 +18,7 @@ So remember how I said `to` is stupid simple? I explicitly omit basic features,
 such as:
 <!-- TODO: update the below bullet point when `to` is not in its current state -->
 <!-- TODO: write documentation on repo maintenance and update the below bullet
-point -->
+           point -->
 - Repositories (there is only one. you must maintain your own, keeping with the
 spirit of LFS and all. you can fork
 [mine](https://github.com/Toxikuu/to-pkgs.git) as reference. but the
@@ -35,8 +35,8 @@ if you're stupid or brave enough to use this, especially in its current state)
 - Curl (used to download shit)
 - Git (used to git shit)
 - LFS[^2]
-- LFStage (currently required, but eventually optional -- it builds the chroot
-stage files)
+- LFStage with to-lfstage (currently required, but eventually optional -- it
+builds the chroot stage files)
 
 <!-- TODO: Verify whether LFS is required cus lowkey idt it is -->
 [^2]: If you wanna try it somewhere else have fun, but this expects LFS.
@@ -55,13 +55,14 @@ make install
 ```
 
 ## Pro-Tips
-WORKING ON IT. SOON I PROMISE.
+~WORKING ON IT. SOON I PROMISE.~ ok so i lied with this promise its gonna be a
+bit because there is so much shit to do.
 
 ## Documentation
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
-- [ ] Instead of sprinkling `laway` throughout my build scripts, include it in a
+- [x] Instead of sprinkling `laway` throughout my build scripts, include it in a
 post-build steps system that runs before QA. This system should be similar to
 QA. Probably call it opts. Move strip into opts. Should allow for stuff like
 opts=(!strip !la)
@@ -117,6 +118,8 @@ only building if the pkgfile is newer than the distfile.
     - [ ] Remove the aliases lint since it appears to neither work nor matter
         - [ ] Update the alias thing does matter, but only for deep
         dependencies. Not sure how I plan to work around this ngl.
+<!-- TODO: ^ Figure out if these should be checked off, and confirm the alias
+             lint is fully gone-->
 - [x] Add post-build QA checks
      - [x] Make them less shit
         - [x] Make them modular
@@ -144,8 +147,11 @@ only building if the pkgfile is newer than the distfile.
     - [ ] Have a file logging the latest package actions (installs, updates,
     removals, etc.)
 - [x] Drop c_c in base.env because it's very flaky
-    - [ ] Fix associated build failures
-- [ ] Stop writing configure options to _cfg
+    - [x] Fix associated build failures
+- [ ] Stop writing configure options to /_cfg_opts
+    - [ ] Tbh keep it for now its nice for debugging whether the environments
+    picked up the options.
 - [ ] Provide an official stage file. Ensure the presence of `zstd`.
     - [x] Make an LFStage profile for it
-    - [ ] Once `to` is relatively stable, install it to the stagefile profile
+    - [ ] Once `to` is relatively stable, install it to the stage file profile
+    (not so sure about this one either; i kinda like destdiring it)
