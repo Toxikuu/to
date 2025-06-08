@@ -285,7 +285,7 @@ impl Package {
             exec!(
                 "
                 if [ -d {UPPER}/etc/ssl/certs ]; then
-                    cp -af {UPPER}/etc/ssl/certs {LOWER}/etc/ssl/
+                    cp -af {UPPER}/etc/ssl {LOWER}/etc/
                 fi
                 "
             )
@@ -293,14 +293,8 @@ impl Package {
 
             exec!(
                 "
-                if [ -d {UPPER}/etc/pki/anchors ]; then
-                    rm -rf {LOWER}/etc/pki/anchors/*
-                    cp -af {UPPER}/etc/pki/anchors/* {LOWER}/etc/pki/anchors
-                fi
-
-                if [ -d {UPPER}/etc/pki/tls ]; then
-                    rm -rf {LOWER}/etc/pki/tls/*
-                    cp -af {UPPER}/etc/pki/tls/* {LOWER}/etc/pki/tls
+                if [ -d {UPPER}/etc/pki ]; then
+                    cp -af {UPPER}/etc/pki {LOWER}/etc
                 fi
                 "
             )
@@ -311,21 +305,16 @@ impl Package {
         if self.dependencies.iter().any(|d| d.name == "rust") {
             debug!("Caching rustup toolchains if needed");
 
-            mkdir_p(Path::new(LOWER).join("opt/rustup/toolchains"))
-                .map_err(|_| BuildError::Cache)?;
-            mkdir_p(Path::new(LOWER).join("opt/rustup/update-hashes"))
-                .map_err(|_| BuildError::Cache)?;
-
             // TODO: Copying bs may happen here where nightly gets copied to nightly/nightly.
             // Testing needed. Probably use rsync if that happens.
             exec!(
                 "
                 if [ -d {UPPER}/opt/rustup/toolchains ]; then
-                    cp -af {UPPER}/opt/rustup/toolchains/* {LOWER}/opt/rustup/toolchains/
+                    cp -af {UPPER}/opt/rustup/toolchains {LOWER}/opt/rustup/
                 fi
 
                 if [ -d {UPPER}/opt/rustup/update-hashes ]; then
-                    cp -af {UPPER}/opt/rustup/update-hashes/* {LOWER}/opt/rustup/update-hashes/
+                    cp -af {UPPER}/opt/rustup/update-hashes {LOWER}/opt/rustup/
                 fi
                 "
             )
@@ -342,7 +331,7 @@ fn setup_overlay() -> Result<(), BuildError> {
         cd        /var/lib/to/chroot
 
         # extract the stage3 if it's absent
-        if [ ! -d lower/usr ]; then 
+        if [ ! -d lower/dev ]; then 
             tar xpf {stagefile} -C lower
         fi
 
