@@ -204,7 +204,7 @@ impl Package {
                         )?;
                     } else {
                         exec!(
-                            r#"  source '{p}' && git clone --depth=1 '{url}' '{s}' && cd '{s}' && gco "${{tag:-{v}}}"  "#,
+                            r#"  source '{p}' && git clone --depth=1 --recursive '{url}' '{s}' && cd '{s}' && gco "${{tag:-{v}}}"  "#,
                             p = pkgfile.display(),
                             s = path.display(),
                             v = self.version,
