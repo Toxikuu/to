@@ -78,14 +78,14 @@ if [ "${#dirs[@]}" -eq 1 ]; then
 fi
 
 
-# Infer environments from dependencies if unspecified
-# Only supported for (one of):
-# * meson/muon  (with samu/ninja)
-# * cmake       (with samu/ninja)
+# Try to infer environments from dependencies if unspecified
 if ! type b | grep -q 'with'; then
-    if [[ ${d[*]} =~ "meson" ]] || [[ "${d[*]}" =~ "muon" ]]; then
+    if [[ ${d[*]} =~ "b,rust" ]]; then with rust; fi
+    if [[ ${d[*]} =~ "b,go" ]]; then with go; fi
+
+    if [[ ${d[*]} =~ "b,meson" ]] || [[ "${d[*]}" =~ "b,muon" ]]; then
         with meson
-    elif [[ ${d[*]} =~ "cmake" ]]; then
+    elif [[ ${d[*]} =~ "b,cmake" ]]; then
         with cmake
     fi
 fi
