@@ -1,0 +1,21 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+# Find all artifact symlinks
+readarray -t asl < <(
+    find "$D" -type l -exec file {} +   |
+        grep -Eo 'symbolic link to .+'  |
+        grep -E  '/A/|/B/|/D/|/S/'      |
+        cut -d: -f1
+)
+
+# Display information about them
+for link in "${asl[@]}"; do
+    file "${link}" >&2
+done
+
+# Verdict
+if [ "${#asl[@]}" -gt 0 ]; then
+    exit 1
+fi

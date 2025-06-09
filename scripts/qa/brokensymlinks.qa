@@ -1,0 +1,20 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+# Find all broken symlinks
+readarray -t bsl < <(
+    find "$D" -type l -exec file {} +   |
+        grep 'broken symbolic link'     |
+        cut -d: -f1
+)
+
+# Display information about them
+for link in "${bsl[@]}"; do
+    file "${link}" >&2
+done
+
+# Verdict
+if [ "${#bsl[@]}" -gt 0 ]; then
+    exit 1
+fi

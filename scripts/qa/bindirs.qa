@@ -1,0 +1,15 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+# Find directories in "$D/usr/bin"
+readarray -t bad < <(find "$D/usr/bin" -type d)
+
+if [ ${#bad[@]} -eq 0 ]; then
+    exit 0
+fi
+
+# shellcheck disable=2016
+echo 'Found directories in $D/usr/bin!'
+printf "%s\n" "${bad[@]}"
+exit 1

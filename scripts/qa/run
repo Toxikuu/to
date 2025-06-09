@@ -11,6 +11,8 @@ declare -A QA=(
     [la]=on
     [pc]=on
     [static]=on
+    [brokensymlinks]=on
+    [artifactsymlinks]=on
 )
 
 
@@ -26,7 +28,7 @@ for opt in ${qa:-}; do
         is_key "$key" || die "Unknown QA check: $key"
         QA["$key"]=off
     elif [[ $opt == * ]]; then
-        key="${opt:1}"
+        key="$opt"
         is_key "$key" || die "Unknown QA check: $key"
         QA["$key"]=on
     fi
