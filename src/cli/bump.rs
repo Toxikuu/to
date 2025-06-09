@@ -18,6 +18,10 @@ pub struct Command {
     /// Skip building
     #[arg(long, short)]
     pub skip_build: bool,
+
+    /// Bump without any interaction or notes
+    #[arg(long, short)]
+    pub auto: bool,
 }
 
 impl Command {
@@ -37,8 +41,9 @@ impl Command {
             };
 
             exec_interactive!(
-                "SKIP_BUILD={} CURR={oldv} NEW={newv} {}/bump-package {name}",
+                "SKIP_BUILD={} CURR={oldv} NEW={newv} AUTO={} {}/bump-package {name}",
                 self.skip_build,
+                self.auto,
                 super::SCRIPT_DIR,
             )?;
 

@@ -36,8 +36,13 @@ finalize() {
         -e "s,<old-version>,$old,g" \
         -e "s,<new-version>,$new,g" \
     /usr/share/to/git-templates/bump-package > "$COMMIT"
-    git commit --template="$COMMIT"
 
+    if $AUTO; then
+        sed '3d' -i "$COMMIT"
+        git commit --file="$COMMIT"
+    else
+        git commit --template="$COMMIT"
+    fi
     rm -f "$COMMIT"
 
 }
@@ -45,6 +50,11 @@ finalize() {
 . ./pkg
 old="$v"
 sed "s/$old/$new/g" -i pkg
+
+if $AUTO; then
+    finalize || die "Failed to finalize ($?) -- giving up..."
+    exit 0
+fi
 
 # trap myself until the package builds :100:
 bash --rcfile /usr/share/to/envs/p.env
