@@ -29,8 +29,6 @@ pub enum Lint {
     DefaultValues,
     DefOpportunity,
     IlOpportunity,
-    // NoCheckout,
-    AliasInDependencies,
 }
 
 impl fmt::Display for Lint {
@@ -39,8 +37,6 @@ impl fmt::Display for Lint {
             | Lint::DefaultValues => "Default Values",
             | Lint::DefOpportunity => "Def Opportunity",
             | Lint::IlOpportunity => "Il Opportunity",
-            // | Lint::NoCheckout => "No Checkout",
-            | Lint::AliasInDependencies => "Alias in Dependencies",
         };
         write!(f, "{s}")
     }
@@ -68,25 +64,12 @@ impl Package {
             return Err(LintError::Linted(Lint::IlOpportunity))
         }
 
-        // if lints::no_checkout(self, &lines_vec) {
-        //     return Err(LintError::Linted(Lint::NoCheckout))
-        // }
-
-        if lints::alias_in_dependencies(self) {
-            return Err(LintError::Linted(Lint::AliasInDependencies))
-        }
-
         Ok(())
     }
 }
 
 mod lints {
     use std::str::Lines;
-
-    use crate::package::{
-        Package,
-        // source::SourceKind,
-    };
 
     /// # Checks whether default values have been used
     /// This lint checks key value pairs to see if they match those in the pkg template
@@ -101,10 +84,10 @@ mod lints {
         ];
 
         for line in lines {
-            if let Some(kv) = line.split_once('=') {
-                if defaults.contains(&kv) {
-                    return true
-                }
+            if let Some(kv) = line.split_once('=')
+                && defaults.contains(&kv)
+            {
+                return true
             }
         }
         false
@@ -130,32 +113,5 @@ mod lints {
         lines_vec
             .iter()
             .any(|l| l.contains("install -") && l.contains("/usr/share/licenses"))
-    }
-
-    // /// # Checks whether git checkout was omitted
-    // /// This lint only runs if a package has a git source
-    // pub fn no_checkout(package: &Package, lines_vec: &[&str]) -> bool {
-    //     if package
-    //         .sources
-    //         .iter()
-    //         .any(|s| matches!(s.kind, SourceKind::Git))
-    //     {
-    //         lines_vec
-    //             .iter()
-    //             .all(|l| !l.contains("git checkout ") && !l.contains("gco"))
-    //     } else {
-    //         false
-    //     }
-    // }
-
-    /// # Checks whether a package has an alias in its dependencies
-    /// Checks if the pkdir is a symlink
-    pub fn alias_in_dependencies(package: &Package) -> bool {
-        package.dependencies.iter().any(|d| {
-            d.to_package()
-                .expect("Failed to form dependency")
-                .pkgdir()
-                .is_symlink()
-        })
     }
 }
