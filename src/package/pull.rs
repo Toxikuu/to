@@ -228,7 +228,6 @@ where
         let data = chunk?;
         partfile.write_all(&data)?;
         downloaded += data.len() as u64;
-        trace!("Downloaded {downloaded} bytes");
 
         pb.set_position(downloaded);
         pb.tick();
