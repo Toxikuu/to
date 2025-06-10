@@ -94,6 +94,7 @@ impl Dep {
 // Not certain if I want to do this because it would in ways simplify and complicate the API, while
 // making this codebase even messier.
 impl Package {
+    #[cfg(test)]
     pub fn to_dep(&self) -> Result<Dep, FormError> {
         Ok(Dep {
             name: self.name.clone(),

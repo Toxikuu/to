@@ -56,7 +56,8 @@ pub enum FormError {
     #[error("Failed to deserialize package")]
     Deserialization(#[from] serde_json::Error),
 
-    #[error("Missing metadata")]
+    #[cfg(test)]
+    #[error("Missing metadata: {0}")]
     MissingMetadata(String),
 }
 
@@ -162,6 +163,7 @@ impl Package {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_dependency(&self) -> bool { self.depkind.is_some() }
 
     // TODO: Use thiserror
