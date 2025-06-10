@@ -58,6 +58,10 @@ impl Command {
         }
 
         for vf in vfs {
+            if vf.is_current && self.outdated_only {
+                continue
+            }
+
             vf.display();
             if let Err(e) = vf
                 .cache()

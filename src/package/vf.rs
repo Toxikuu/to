@@ -152,12 +152,12 @@ impl Package {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Vf {
     /// Name
-    n:          String,
+    pub n:          String,
     /// Version
-    v:          String,
+    pub v:          String,
     /// Upstream Version
-    uv:         String,
-    is_current: bool,
+    pub uv:         String,
+    pub is_current: bool,
 }
 
 impl Vf {
