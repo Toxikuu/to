@@ -11,6 +11,7 @@ use serde::{
 };
 use tracing::{
     debug,
+    error,
     instrument,
     trace,
 };
@@ -20,7 +21,10 @@ use super::{
     Package,
 };
 use crate::{
-    package::install::in_build_environment,
+    package::{
+        all_package_names,
+        install::in_build_environment,
+    },
     utils::parse::us_array,
 };
 
@@ -97,6 +101,30 @@ impl Package {
                 .depkind
                 .ok_or(FormError::MissingMetadata("depkind".to_owned()))?,
         })
+    }
+
+    /// # Find shallow dependants for a package
+    ///
+    /// This function gathers all packages, and checks to see if their shallow dependencies contain
+    /// `self.name`.
+    ///
+    /// # Errors
+    /// - Will fail if `self` could not be converted to a `Dep`
+    /// - Will fail if any package could not be formed
+    pub fn dependants(&self) -> Result<Vec<Package>, FormError> {
+        let all_packages = all_package_names()
+            .iter()
+            .map(|p| Package::from_s_file(p).inspect_err(|e| error!("Failed to form {p}: {e}")))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut dependants = Vec::new();
+        for package in all_packages {
+            if package.dependencies.iter().any(|d| d.name == self.name) {
+                dependants.push(package)
+            }
+        }
+
+        Ok(dependants)
     }
 
     /// # Finds deep dependencies for a package, with a filter

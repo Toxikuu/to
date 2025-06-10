@@ -1,5 +1,7 @@
 // package/view.rs
 
+use std::process::exit;
+
 use tracing::error;
 
 use super::Package;
@@ -73,6 +75,23 @@ impl Package {
         println!(" \x1b[3m{sources}\x1b[0m");
         println!("󰏗 \x1b[3m{}\x1b[0m", distfile.display());
         println!(" \x1b[3m{}\x1b[0m", pkgfile.display());
+    }
+
+    pub fn view_dependants(&self) {
+        let deps = &self.dependants().unwrap_or_else(|e| {
+            error!("Failed to form one or more packages: {e}");
+            exit(1);
+        });
+
+        if deps.is_empty() {
+            println!("Nothing depends on {self}");
+            return;
+        }
+
+        println!("󰪴 \x1b[1mDependants:\x1b[0m");
+        for dep in deps {
+            println!("{dep:+}");
+        }
     }
 
     pub fn view_dependencies(&self) {

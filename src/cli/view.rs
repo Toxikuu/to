@@ -57,6 +57,11 @@ impl Command {
                 continue
             }
 
+            if self.dependants {
+                pkg.view_dependants();
+                continue
+            }
+
             if self.dependencies {
                 if self.deep {
                     pkg.view_deep_dependencies();
