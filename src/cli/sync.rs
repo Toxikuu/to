@@ -10,6 +10,7 @@ use crate::{
     utils::file::exists,
 };
 
+/// Sync the local package repository with its remote
 #[derive(Args, Debug)]
 pub struct Command {
     /// The branch to sync

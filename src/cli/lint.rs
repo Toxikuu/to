@@ -10,6 +10,7 @@ use crate::{
     package::Package,
 };
 
+/// Lint a package's build instructions
 #[derive(Args, Debug)]
 pub struct Command {
     /// The package(s) to lint

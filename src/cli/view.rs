@@ -1,11 +1,16 @@
+use std::process::exit;
+
 use clap::Args;
+use tracing::error;
 
 use super::CommandError;
 use crate::{
+    config::CONFIG,
     imply_all,
     package::Package,
 };
 
+/// View information about a package
 #[derive(Args, Debug)]
 pub struct Command {
     /// The package(s) to view

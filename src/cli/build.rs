@@ -13,6 +13,7 @@ use crate::{
     },
 };
 
+/// Build a package from source
 #[derive(Args, Debug)]
 pub struct Command {
     /// Package name, optionally with the version

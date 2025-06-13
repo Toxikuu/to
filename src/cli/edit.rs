@@ -9,6 +9,7 @@ use tracing::{
 use super::CommandError;
 use crate::exec_interactive;
 
+/// Edit build instructions and/or metadata for a package
 #[derive(Args, Debug)]
 pub struct Command {
     /// The packages to edit

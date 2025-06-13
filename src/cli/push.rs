@@ -24,6 +24,7 @@ use crate::{
     },
 };
 
+/// Push a package's distfile to the server
 #[derive(Args, Debug)]
 pub struct Command {
     /// The package to install

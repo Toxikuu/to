@@ -4,6 +4,7 @@ use tracing::info;
 use super::CommandError;
 use crate::exec_interactive;
 
+/// Create an alias for a package
 #[derive(Args, Debug)]
 pub struct Command {
     /// Package name, optionally with the version

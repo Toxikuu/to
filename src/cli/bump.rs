@@ -7,6 +7,7 @@ use crate::{
     package::Package,
 };
 
+/// Bump a package's version
 #[derive(Args, Debug)]
 pub struct Command {
     /// The packages to bump

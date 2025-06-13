@@ -5,6 +5,7 @@ use clap::Args;
 use super::CommandError;
 use crate::package::Package;
 
+/// Return unformatted, script-friendly data about a package
 #[derive(Args, Debug)]
 pub struct Command {
     /// Package name, optionally with the version

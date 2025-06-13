@@ -6,6 +6,7 @@ use crate::{
     package::Package,
 };
 
+/// Serialize package metadata
 #[derive(Args, Debug)]
 pub struct Command {
     /// The packages to generate

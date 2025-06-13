@@ -6,6 +6,7 @@ use crate::server;
 #[derive(Args, Debug)]
 pub struct Command {}
 
+/// Run a distfile server
 impl Command {
     // TODO: Remove this allow once I add arguments for serve
     #[allow(unused_variables)]

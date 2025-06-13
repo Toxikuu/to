@@ -9,6 +9,7 @@ use tracing::{
 use super::CommandError;
 use crate::exec_interactive;
 
+/// Add a package to the package repository
 #[derive(Args, Debug)]
 pub struct Command {
     /// The template to use when adding the package

@@ -15,6 +15,7 @@ use crate::{
     },
 };
 
+/// Fetch the latest upstream version for a package
 #[derive(Args, Debug)]
 pub struct Command {
     /// The package(s) to vf

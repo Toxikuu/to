@@ -7,6 +7,7 @@ use crate::{
     package::Package,
 };
 
+/// Install a package from its distfile
 #[derive(Args, Debug)]
 pub struct Command {
     /// The package to install

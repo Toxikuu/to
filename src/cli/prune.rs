@@ -10,6 +10,8 @@ use crate::{
     package::Package,
 };
 
+// TODO: Improve pruning
+/// Prune stale files for a package
 #[derive(Args, Debug)]
 pub struct Command {
     /// The package(s) to prune

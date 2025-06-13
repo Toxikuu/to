@@ -9,6 +9,7 @@ use tracing::{
 use super::CommandError;
 use crate::exec_interactive;
 
+/// Delete a package from the package repository
 #[derive(Args, Debug)]
 pub struct Command {
     /// The packages to delete

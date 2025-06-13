@@ -10,6 +10,7 @@ use crate::{
     },
 };
 
+/// Pull a package's distfile from the server
 #[derive(Args, Debug)]
 pub struct Command {
     /// The package to install

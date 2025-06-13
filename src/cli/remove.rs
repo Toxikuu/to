@@ -4,6 +4,7 @@ use tracing::error;
 use super::CommandError;
 use crate::package::Package;
 
+/// Uninstall a package
 #[derive(Args, Debug)]
 pub struct Command {
     /// The package(s) to remove
