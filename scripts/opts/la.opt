@@ -2,5 +2,5 @@
 
 set -euo pipefail
 
-readarray -t las < <(find "$D" -type f -name '*.la')
+readarray -t las < <(find "$D" \( -type f -o -type l \) -name '*.la')
 rm -vf "${las[@]}"
