@@ -149,9 +149,6 @@ impl Package {
         )
         .map_err(|_| InstallError::Execution)?;
 
-        fs::write(iv, version)?;
-        info!("Installed {self:-}");
-
         // Do some other stuff if updating
         if updating {
             // TODO: Consider adding update hooks (but wait until needed)
@@ -170,6 +167,9 @@ impl Package {
             self.message(suppress, MessageHook::Install);
         }
 
+        // We write the version after removing dead files
+        fs::write(iv, version)?;
+        info!("Installed {self:-}");
         Ok(())
     }
 

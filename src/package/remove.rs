@@ -232,7 +232,9 @@ impl Package {
         Ok(())
     }
 
-    #[instrument]
+    // FIX: Finds newly installed files instead of actual dead files :sob:
+    // TODO: Maybe fixed? ^
+    #[instrument(skip(self))]
     pub fn remove_dead_files_after_update(&self) -> Result<(), RemoveError> {
         if !self.is_installed() {
             warn!(
@@ -242,6 +244,7 @@ impl Package {
         }
 
         let dead_files = find_dead_files(self)?;
+        debug!("Found dead files for {self:-}:\n{dead_files:#?}");
         dead_files.iter().for_each(|p| {
             let path = Path::new(p);
 
@@ -265,11 +268,12 @@ impl Package {
 
 /// # Finds unique (dead) files in an old manifest
 /// Locates all manifests specific to that package, matching against them for dead files
-#[instrument]
+#[instrument(skip(package))]
 pub fn find_dead_files(package: &Package) -> Result<Vec<String>, RemoveError> {
+    trace!("Finding dead files for {package:-}");
     if !package.is_installed() {
         warn!(
-            "Attempted to find dead files for uninstalled package '{package}'. Kindly report this as a bug."
+            "Attempted to find dead files for uninstalled package '{package:-}'. Kindly report this as a bug."
         );
         return Err(RemoveError::NotInstalled)
     }
@@ -280,9 +284,18 @@ pub fn find_dead_files(package: &Package) -> Result<Vec<String>, RemoveError> {
     let manifests = locate(package.datadir(), 1);
     let data = read_all_manifests(&manifests)?;
 
-    let this_manifest = package
-        .manifest()
-        .ok_or(io::Error::from(ErrorKind::NotFound))?;
+    // Calculate the old manifest from the yet-unoverwritten IV
+    let old_manifest = PathBuf::from(format!(
+        "/var/db/to/data/{}/MANIFEST@{iv}",
+        package.name,
+        iv = match package.installed_version() {
+            | Some(v) => v,
+            | None => {
+                error!("IV exists but manifest doesn't?");
+                return Err(RemoveError::NotInstalled)
+            },
+        },
+    ));
 
-    Ok(find_unique(&data, &this_manifest)?)
+    Ok(find_unique(&data, &old_manifest)?)
 }

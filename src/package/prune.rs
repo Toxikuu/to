@@ -71,8 +71,8 @@ impl Package {
                 .map_while(Result::ok)
                 .filter(|f| {
                     let file_name = f.file_name().to_string_lossy().to_string();
-                    // Skip files that don't end with version and that don't start with MANIFEST@
-                    !file_name.ends_with(version) && !file_name.starts_with("MANIFEST@")
+                    // Filter for files that are manifests, but that aren't the current version
+                    !file_name.ends_with(version) && file_name.starts_with("MANIFEST@")
                 })
                 .map(|f| f.path())
                 .collect::<Vec<_>>()
@@ -81,25 +81,29 @@ impl Package {
         };
         trace!("Found {pruneable_manifests:?}");
 
+        // TODO: Test these some more
         for f in pruneable_sources {
-            trace!("Pruning source:   {}", f.display());
+            trace!("Pruning source: {}", f.display());
             if let Err(e) = rmr(&f) {
                 warn!("Failed to prune source {}: {e}", f.display())
             }
         }
-        // TODO: Test for safety
+
         for f in pruneable_dists {
-            trace!("Pruning dist:     {}", f.display());
-            // rmr(f);
+            trace!("Pruning dist: {}", f.display());
+            if let Err(e) = rmr(&f) {
+                warn!("Failed to prune dist {}: {e}", f.display())
+            }
         }
-        // TODO: Test for safety
+
         for f in pruneable_manifests {
             trace!("Pruning manifest: {}", f.display());
-            // rmr(f);
+            if let Err(e) = rmr(&f) {
+                warn!("Failed to prune manifest {}: {e}", f.display())
+            }
         }
 
         info!("Pruned {self}");
-
         Ok(())
     }
 }
