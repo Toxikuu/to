@@ -7,6 +7,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 # Define QA checks and their default states
 declare -A QA=(
     [emptydestdir]=on
+    [doubledestdir]=on
     [usrlocal]=on
     [la]=on
     [pc]=on

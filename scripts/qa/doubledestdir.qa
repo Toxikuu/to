@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+if [ -e "$D$D" ]; then
+    echo "Double destdir detected!" >&2
+    exit 1
+fi
