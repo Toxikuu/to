@@ -16,7 +16,8 @@ is_key() {
 }
 
 
-for opt in ${opts:-}; do
+set +u
+for opt in "${opts[@]}"; do
     if [[ $opt == '!'* ]]; then
         key="${opt:1}"
         is_key "$key" || die "Unknown opt: $key"
@@ -27,6 +28,7 @@ for opt in ${opts:-}; do
         OPTS["$key"]=on
     fi
 done
+set -u
 
 
 for k in "${!OPTS[@]}"; do

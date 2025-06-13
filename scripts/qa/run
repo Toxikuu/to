@@ -22,7 +22,9 @@ is_key() {
 }
 
 
-for opt in ${qa:-}; do
+set +u
+for opt in "${qa[@]}"; do
+    echo "Specified QA option: ${opt}" >&2
     if [[ $opt == '!'* ]]; then
         key="${opt:1}"
         is_key "$key" || die "Unknown QA check: $key"
@@ -33,6 +35,7 @@ for opt in ${qa:-}; do
         QA["$key"]=on
     fi
 done
+set -u
 
 
 for k in "${!QA[@]}"; do
