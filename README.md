@@ -34,12 +34,13 @@ if you're stupid or brave enough to use this, especially in its current state)
 - OverlayFS support in your kernel (CONFIG_OVERLAY_FS=*)
 - Curl (used to download shit)
 - Git (used to git shit)
-- LFS[^2]
-- LFStage with to-lfstage (currently required, but eventually optional -- it
-builds the chroot stage files)
+- LFS[^1]
+- [LFStage](https://github.com/Toxikuu/lfstage.git) with
+[to-lfstage](https://github.com/Toxikuu/to-lfstage.git) (currently required, but
+eventually optional -- it builds the chroot stage files)
 
 <!-- TODO: Verify whether LFS is required cus lowkey idt it is -->
-[^2]: If you wanna try it somewhere else have fun, but this expects LFS.
+[^1]: If you wanna try it somewhere else have fun, but this expects LFS.
 
 ## Installation
 Please don't. I made this for myself and myself alone. This will hopefully be
