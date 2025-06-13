@@ -62,6 +62,9 @@ bit because there is so much shit to do.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
+- [ ] Release the stage file somewhere and download it
+- [ ] Add a config option to enable all logs that are currently commented out
+    - Maybe a `really_fucking_loud_logs` bool in the config
 - [x] Instead of sprinkling `laway` throughout my build scripts, include it in a
 post-build steps system that runs before QA. This system should be similar to
 QA. Probably call it opts. Move strip into opts. Should allow for stuff like
@@ -90,8 +93,11 @@ only building if the pkgfile is newer than the distfile.
     number of commit-versioned packages.
 - [ ] Improve `to view`
     - [x] Add `--dependencies` and `--deep-dependencies`
-    - [ ] Add `--dependants`
+    - [x] Add `--dependants`
+    - [x] Add `--tree` to view the file tree of a package's distfile
     - [ ] Add `--distfiles` to show available distfiles for a package
+    - [ ] Add `--upstream` to show a package's upstream
+    - [ ] Add `--source` to show a package's source
     - [ ] Add `--outdated` to show only outdated packages
     - [ ] Add `--installed` to show only installed (and outdated) packages
     - [ ] Add `--available` to show only available packages
@@ -115,11 +121,10 @@ only building if the pkgfile is newer than the distfile.
     written in 5 minutes while high off sleep deprivation
 - [x] Write `to lint`
     - [x] Add a lint "IlOpportunity" for missed il usage, similar to def's lint
-    - [ ] Remove the aliases lint since it appears to neither work nor matter
-        - [ ] Update the alias thing does matter, but only for deep
-        dependencies. Not sure how I plan to work around this ngl.
-<!-- TODO: ^ Figure out if these should be checked off, and confirm the alias
-             lint is fully gone-->
+    - [x] Remove the aliases lint since it appears to neither work nor matter
+        - [x] Update the alias thing does matter, but only for deep
+        dependencies. Not sure how I plan to work around this ngl. Aliases are
+        now supported in deep dependencies.
 - [x] Add post-build QA checks
      - [x] Make them less shit
         - [x] Make them modular
@@ -135,7 +140,7 @@ only building if the pkgfile is newer than the distfile.
 - [ ] Fork my reqs.sh from LFStage and adapt it for use here
 - [x] Add `to sync`
 - [ ] Add `to search`
-- [ ] Add `to --version`
+- [x] Add `to --version`
 - [x] Cache the output of `to vf`. This cache should reset every 4 hours, but
   should be overrideable by a flag.
     - [ ] Add an option to use the cache, even if it's stale
@@ -149,7 +154,7 @@ only building if the pkgfile is newer than the distfile.
 - [x] Drop c_c in base.env because it's very flaky
     - [x] Fix associated build failures
 - [ ] Stop writing configure options to /_cfg_opts
-    - [ ] Tbh keep it for now its nice for debugging whether the environments
+    - Tbh keep it for now its nice for debugging whether the environments
     picked up the options.
 - [ ] Provide an official stage file. Ensure the presence of `zstd`.
     - [x] Make an LFStage profile for it
