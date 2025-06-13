@@ -40,7 +40,6 @@ use crate::{
     utils::file::mtime,
 };
 
-// TODO: Make stagefile configurable
 const MERGED: &str = "/var/lib/to/chroot/merged";
 
 #[rustfmt::skip]

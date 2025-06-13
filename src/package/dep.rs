@@ -168,15 +168,6 @@ impl Package {
         }
     }
 
-    // TODO: [WIP: testing needed] Probably fucking rewrite all the dependency resolution logic so
-    // as not to not pull in required dependencies for runtime dependencies. This is hopefully
-    // fixed by adding resolution filtering.
-    //
-    // TODO: Test dependency resolution filtering. It passes all tests, but whether it works in
-    // practice is yet to be seen.
-    //
-    // This could probably be done by introducing dependency filtering in this function and in
-    // `deep_deps()`.
     /// # Resolves deep dependencies, with a filter
     ///
     /// This function wraps `deep_deps()`, and ensures the package is not a dependency of itself
@@ -210,60 +201,10 @@ impl Package {
         trace!("Resolved dependencies for {self:-}:");
         for dep in &order {
             trace!(" - {dep} ({})", dep.depkind.unwrap());
-            // TODO: impl From Package for Dep and use Display ^
         }
 
         order
     }
-
-    // /// # Installs dependencies for a package
-    // ///
-    // /// This function does not install build dependencies. It optionally installs runtime
-    // /// dependencies.
-    // ///
-    // /// # Arguments
-    // /// * `force`           - Whether to forcibly install all dependencies
-    // /// * `install_runtime` - Whether to install runtime dependencies (they are unwanted and
-    // ///   problematic in the build chroot)
-    // /// * `visited`         - A hashset of already visited dependencies to avoid infinite recursion
-    // ///
-    // /// # Errors
-    // /// - Will fail if a dependency could not be converted to a package (which shouldn't happen)
-    // /// - Will fail if a dependency could not be installed
-    // TODO: Refactor this to account for dep filtering
-    // The current solution for this was to just resolve install dependencies, and install those
-    // without bothering with this function at all. This solution is really unstable though, so
-    // this stays commented out for the moment.
-    //
-    // #[instrument(skip(self, install_runtime, visited, force))]
-    // pub fn install_deps(
-    //     &self,
-    //     force: bool,
-    //     install_runtime: bool,
-    //     visited: &mut HashSet<String>,
-    //     suppress: bool,
-    // ) -> Result<(), InstallError> {
-    //     for dep in &self.dependencies {
-    //         if dep.kind == DepKind::Build {
-    //             // trace!("Not installing build dependency '{dep}'");
-    //             continue;
-    //         }
-    //
-    //         if dep.kind == DepKind::Runtime && !install_runtime {
-    //             // trace!("Not installing runtime dependency '{dep}'");
-    //             continue;
-    //         }
-    //
-    //         trace!("Installing dependency '{dep}' for '{self:-}'");
-    //
-    //         // Install all required dependencies
-    //         dep.to_package()?
-    //             .install_inner(force, force, visited, suppress)
-    //             .permit(|e| matches!(e, InstallError::AlreadyInstalled))?;
-    //     }
-    //
-    //     Ok(())
-    // }
 
     /// # Collects all dependencies that should be in the build chroot
     ///

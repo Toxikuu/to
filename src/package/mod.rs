@@ -166,7 +166,6 @@ impl Package {
     #[allow(dead_code)]
     pub fn is_dependency(&self) -> bool { self.depkind.is_some() }
 
-    // TODO: Use thiserror
     #[instrument(level = "debug")]
     pub fn from_s_file(name: &str) -> Result<Self, FormError> {
         let s_file = format!("/var/db/to/pkgs/{name}/s");

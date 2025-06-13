@@ -80,11 +80,6 @@ impl Command {
                 continue
             }
 
-            if self.dependants {
-                pkg.view_dependants();
-                continue
-            }
-
             if self.dependencies {
                 if self.deep {
                     pkg.view_deep_dependencies();
@@ -98,9 +93,8 @@ impl Command {
                 if self.deep {
                     todo!("Deep dependants");
                 } else {
-                    todo!("Dependants");
+                    pkg.view_dependants();
                 }
-                #[allow(unreachable_code)] // stop `todo!()`s from complaining
                 continue
             }
 

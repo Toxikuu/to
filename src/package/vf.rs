@@ -187,7 +187,7 @@ impl Vf {
     /// The Vf gets serialized to json and written to /var/cache/to/data/$n/vf
     /// A Vf is not recached if the cache file exists, since it is assumed that the Vf must have
     /// been uncached if the cache file exists.
-    // TODO: Consider only caching uv instead of the whole vf struct
+    // PERF: Cache only uv instead of the whole vf struct
     pub fn cache(&self) -> Result<(), VfCacheError> {
         let cache_file = Self::cache_file(&self.n);
 
@@ -202,7 +202,7 @@ impl Vf {
             return Err(VfCacheError::NotRecaching)
         }
 
-        let ser = serde_json::to_string_pretty(&self).unwrap(); // TODO: Replace the serialization
+        let ser = serde_json::to_string_pretty(&self).unwrap(); // PERF: Reference line 190
         write(cache_file, &ser)?;
         debug!("Cached vf for {}@{}", &self.n, try_shorten(&self.v));
 
@@ -228,7 +228,7 @@ impl Vf {
         }
 
         let contents = read_to_string(cache_file)?;
-        let vf = serde_json::from_str(&contents).unwrap(); // TODO: Replace the cache serialization
+        let vf = serde_json::from_str(&contents).unwrap(); // PERF: Reference line 190
         Ok(vf)
     }
 }
