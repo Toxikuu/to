@@ -143,18 +143,18 @@ async fn should_download(
     file: &Path,
     force: bool,
 ) -> Result<Option<Response>, DownloadError> {
-    debug!("Checking whether {url} should be downloaded");
+    // debug!("Checking whether {url} should be downloaded");
 
     let resp = client.get(url).send().await?.error_for_status()?;
     let headers = resp.headers();
 
     if force {
-        debug!("Should download because --force was passed");
+        // debug!("Should download because --force was passed");
         return Ok(Some(resp))
     }
 
     if !file.exists() {
-        debug!("Should download because local file does not exist");
+        // debug!("Should download because local file does not exist");
         return Ok(Some(resp))
     }
 
@@ -162,14 +162,14 @@ async fn should_download(
     let local_modtime = get_local_modtime(file).unwrap_or(SystemTime::UNIX_EPOCH);
 
     if server_modtime <= local_modtime {
-        debug!(
-            "Should not download because local file ({local_modtime:?}) is not older than server's {server_modtime:?}"
-        );
+        // debug!(
+        //     "Should not download because local file ({local_modtime:?}) is not older than server's {server_modtime:?}"
+        // );
         Ok(None)
     } else {
-        debug!(
-            "Should download because server's file ({server_modtime:?}) is newer than local ({local_modtime:?})"
-        );
+        // debug!(
+        //     "Should download because server's file ({server_modtime:?}) is newer than local ({local_modtime:?})"
+        // );
         Ok(Some(resp))
     }
 }
