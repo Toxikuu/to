@@ -4,9 +4,8 @@ set -euo pipefail
 
 # Find all artifact symlinks
 readarray -t asl < <(
-    find "$D" -type l -exec file {} +   |
-        grep -Eo 'symbolic link to .+'  |
-        grep -E  '/A/|/B/|/D/|/S/'      |
+    find "$D" -type l -exec file {} +       |
+        grep -E 'symbolic link to /[ABDS]/' |
         cut -d: -f1
 )
 
