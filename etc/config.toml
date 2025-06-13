@@ -2,8 +2,9 @@ log_level = "trace"
 tests = true
 strip = true
 makeflags = "-j16"
-stagefile = "/var/cache/lfstage/profiles/to/stages/lfstage-to-2025-06-09_17-43-44.tar.xz"
+stagefile = "/var/cache/lfstage/profiles/to/stages/lfstage-to-2025-06-12_21-16-55.tar.xz"
 cflags = "-march=native -O2 -pipe"
 server_address = "http://127.0.0.1:7020"
 package_repo = "https://github.com/Toxikuu/to-pkgs.git"
 package_repo_branch = "not-systemd"
+tree_command = "eza -T --color=always --icons=always -F=always --no-quotes -l --total-size"
