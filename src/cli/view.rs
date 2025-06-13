@@ -39,6 +39,14 @@ pub struct Command {
     #[arg(long, short = '!')]
     pub deep: bool,
 
+    /// View the filetree of a package's distfile
+    #[arg(long, short = 'T')]
+    pub tree: bool,
+
+    /// With `--tree`, the command to use
+    #[arg(long)]
+    pub tree_command: Option<String>,
+
     /// Show messages
     #[arg(long, short)]
     pub messages: bool,
@@ -59,6 +67,16 @@ impl Command {
         for (i, pkg) in pkgs.iter().enumerate() {
             if self.messages {
                 pkg.view_all_messages(pkgslen > 1);
+                continue
+            }
+
+            if self.tree {
+                let tree_command = self.tree_command.as_ref().unwrap_or(&CONFIG.tree_command);
+                println!("File tree for {pkg:-}:");
+                if let Err(e) = pkg.view_filetree(tree_command) {
+                    error!("Failed to view file tree for {pkg:-}: {e}");
+                    exit(1);
+                };
                 continue
             }
 

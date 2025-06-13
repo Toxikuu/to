@@ -1,10 +1,21 @@
 // package/view.rs
 
-use std::process::exit;
+use std::{
+    io,
+    process::exit,
+};
 
+use fshelpers::{
+    mkdir_p,
+    rmdir_r,
+};
 use tracing::error;
 
 use super::Package;
+use crate::{
+    exec,
+    sex,
+};
 
 impl Package {
     /// # Print out information about a package, with varying levels of detail
@@ -92,6 +103,41 @@ impl Package {
         for dep in deps {
             println!("{dep:+}");
         }
+    }
+
+    // # View a package's file tree, with a custom tree command
+    //
+    // This function extracts the package's distfile to `/var/tmp/to/tree`, complaining if the
+    // distfile doesn't exist. It then executes a custom tree command.
+    //
+    // # Arguments
+    // * `tree_command`     - The `tree` command to execute on `/var/tmp/to/tree`
+    //
+    // # Errors
+    // - I/O errors
+    // - Distfile extraction or tree command failed
+    pub fn view_filetree(&self, tree_command: &str) -> io::Result<()> {
+        if !self.distfile().exists() {
+            error!("No distfile for {self:-} -- can't view filetree");
+            exit(1)
+        }
+
+        rmdir_r("/var/tmp/to/tree")?;
+        mkdir_p("/var/tmp/to/tree")?;
+        exec!(
+            "
+            tar xvf '{distfile}'        \
+            -C /var/tmp/to/tree         \
+            --keep-directory-symlink    \
+            --numeric-owner             \
+            --no-overwrite-dir          \
+            --exclude=MANIFEST
+            ",
+            distfile = self.distfile().to_string_lossy()
+        )?;
+
+        println!("{}", sex!("{tree_command} /var/tmp/to/tree")?);
+        Ok(())
     }
 
     pub fn view_dependencies(&self) {
