@@ -13,7 +13,6 @@ use thiserror::Error;
 use tracing::info;
 
 use super::endpoints::*;
-use crate::config::CONFIG;
 
 #[derive(Debug, Error)]
 pub enum ServeError {
@@ -21,12 +20,11 @@ pub enum ServeError {
     Bind(#[from] io::Error),
 }
 
-pub async fn serve() -> Result<(), ServeError> {
+pub async fn serve(full_addr: &str) -> Result<(), ServeError> {
     let router = Router::new()
         .route("/{filename}", get(download))
         .route("/up/{filename}", post(upload));
 
-    let full_addr = &CONFIG.server_address;
     let addr = full_addr
         .split_once("://")
         .map(|a| a.1)
