@@ -59,17 +59,18 @@ impl Command {
         }
 
         for vf in vfs {
-            if vf.is_current && self.outdated_only {
-                continue
-            }
-
-            vf.display();
             if let Err(e) = vf
                 .cache()
                 .permit(|e| matches!(e, VfCacheError::NotRecaching))
             {
                 warn!("Failed to cache vf '{vf:?}': {e}")
             };
+
+            if vf.is_current && self.outdated_only {
+                continue
+            }
+
+            vf.display();
         }
 
         Ok(())
