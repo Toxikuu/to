@@ -45,7 +45,7 @@ pub fn sex(command: &str) -> io::Result<String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    trace!("Received output:\n{stdout}");
+    // trace!("Received output:\n{stdout}");
     Ok(stdout)
 }
 
