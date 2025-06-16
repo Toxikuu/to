@@ -1,18 +1,11 @@
 use clap::Args;
 use futures::future::join_all;
-use permitit::Permit;
-use tracing::{
-    error,
-    warn,
-};
+use tracing::error;
 
 use super::CommandError;
 use crate::{
     imply_all,
-    package::{
-        Package,
-        vf::VfCacheError,
-    },
+    package::Package,
 };
 
 /// Fetch the latest upstream version for a package
@@ -59,13 +52,6 @@ impl Command {
         }
 
         for vf in vfs {
-            if let Err(e) = vf
-                .cache()
-                .permit(|e| matches!(e, VfCacheError::NotRecaching))
-            {
-                warn!("Failed to cache vf '{vf:?}': {e}")
-            };
-
             if vf.is_current && self.outdated_only {
                 continue
             }

@@ -18,6 +18,7 @@ use fshelpers::{
     mkdir_p,
     rmf,
 };
+use permitit::Permit;
 use serde::{
     Deserialize,
     Serialize,
@@ -27,6 +28,7 @@ use tracing::{
     debug,
     error,
     trace,
+    warn,
 };
 
 use crate::{
@@ -139,7 +141,16 @@ impl Package {
         let v = &self.version;
 
         match uv {
-            | Some(uv) => Ok(Vf::new(n, v, &uv)),
+            | Some(uv) => {
+                let vf = Vf::new(n, v, &uv);
+                if let Err(e) = vf
+                    .cache()
+                    .permit(|e| matches!(e, VfCacheError::NotRecaching))
+                {
+                    warn!("Failed to cache vf for {self:-}: {e}")
+                };
+                Ok(vf)
+            },
             | None => {
                 debug!("Upstream version fetching is disabled for {self:-}. Skipping...");
                 Err(VfError::Disabled)
