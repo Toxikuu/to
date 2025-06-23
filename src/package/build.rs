@@ -286,6 +286,10 @@ impl Package {
                 if [ -d {UPPER}/etc/ssl/certs ]; then
                     cp -af {UPPER}/etc/ssl {LOWER}/etc/
                 fi
+
+                if [ -d {UPPER}/etc/pki ]; then
+                    cp -af {UPPER}/pki {LOWER}/etc/
+                fi
                 "
             )
             .map_err(|_| BuildError::Cache)?;
