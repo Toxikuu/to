@@ -189,13 +189,17 @@ finalize() {
 }
 
 
+# If we're finalizing, enter the directory, otherwise template it
+n="${n:-${1%@*}}"
 if ! ${FINALIZE_ONLY:-false}; then
     template "$@"
+else
+    cd "$n"
 fi
+
 
 # trap myself until the package builds :100:
 bash --rcfile /usr/share/to/envs/p.env
-n="${n:-${1%@*}}"
 until finalize; do
     echo "Failed to finalize ($?) -- retrying..."
     sleep 0.5
