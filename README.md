@@ -2,7 +2,7 @@
 
 <!-- TODO: update the below line when I'm comfortable with the state of this
            project -->
-**Stupid-simple, rock-solid (EVENTUALLY CURRENTLY WIP AND NOT SOLID AT ALL DO
+**Relatively simple, rock-solid (EVENTUALLY CURRENTLY WIP AND NOT SOLID AT ALL DO
 NOT USE HERE BE DRAGONS) package manager for LFS**
 
 ## Features
@@ -12,6 +12,7 @@ NOT USE HERE BE DRAGONS) package manager for LFS**
 - Utilities to hold your hand while you maintain packages (aka mostly foolproof
 bash scripts, emphasis on the mostly)
 - Manifest system (meaning stray files get deleted and shit)
+- (Fast) upstream version checking
 
 ## Non-Features
 So remember how I said `to` is stupid simple? I explicitly omit basic features,
@@ -63,7 +64,9 @@ bit because there is so much shit to do.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
-- [ ] Release the stage file somewhere and download it
+- [ ] Release the stage file somewhere and download it when installing
+    - [ ] Add a variable to the makefile to avoid downloading the default
+    stagefile
 - [ ] Add a config option to enable all logs that are currently commented out
     - Maybe a `really_fucking_loud_logs` bool in the config
 - [x] Instead of sprinkling `laway` throughout my build scripts, include it in a
@@ -111,8 +114,10 @@ only building if the pkgfile is newer than the distfile.
         - [ ] If I drop exclusions, it should prefer the system manifest, and
         fall back to the tarball one, since the system would be faster.
     - [x] Adjust the format for outdated packages to be 'name@iv -> v'
-- [ ] Write an explanation of how `to` works
-    - [ ] Also write documentation (eventually)
+- [ ] Also write documentation (eventually)
+    - [ ] Man pages
+    - [ ] mdbook docs
+        - [ ] Should dive into how `to` works and rationale behind design
 - [ ] Fucking finish this readme
     - [ ] Write an information section talking about how `to` has optional
     features for maintainers, servers, and end users (so you can have a single
