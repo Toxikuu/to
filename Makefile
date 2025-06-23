@@ -39,7 +39,7 @@ ifeq ($(ENABLE_TOOLS),1)
 	cp -avf scripts                               $(DESTDIR)/usr/share/to/
 endif
 
-	install -vdm755 $(DESTDIR)/etc/to
+	install -dm755                                $(DESTDIR)/etc/to
 ifeq ($(ENABLE_CONF),1)
 	install -Dm644 $(wildcard etc/*)           -t $(DESTDIR)/etc/to/
 endif
@@ -82,3 +82,44 @@ uninstall:
 	rm -f $(DESTDIR)/usr/bin/to
 	rm -rf $(DESTDIR)/usr/share/to
 	@echo "You may also want to remove $(DESTDIR)/etc/to, $(DESTDIR)/var/cache/to, and $(DESTDIR)/var/db/to"
+
+dev:
+	VERSION=$(VERSION) cargo +nightly build --release
+
+	sudo install -dm755                                /var/lib/to/chroot
+	sudo install -dm755                                /var/cache/to/sources
+
+	sudo install -dm755                                /var/db/to/data
+	sudo install -dm755                                /var/db/to/pkgs
+	sudo install -dm755                                /var/cache/to/data
+	sudo install -dm755                                /var/cache/to/dist
+
+	sudo install -Dm755 target/release/to           -t /usr/bin/
+	sudo install -Dm644 $(wildcard envs/*.env)      -t /usr/share/to/envs/
+
+	sudo install -Dm644 $(wildcard git-templates/*) -t /usr/share/to/git-templates/
+	sudo install -Dm644 template                    -t /usr/share/to/
+	sudo cp -avf scripts                               /usr/share/to/
+
+	sudo install -dm755                                /etc/to
+	sudo install -Dm644 $(wildcard etc/*)           -t /etc/to/
+
+
+
+	sudo install -dm755                                /var/lib/to/chroot/lower/var/lib/to/chroot
+	sudo install -dm755                                /var/lib/to/chroot/lower/var/cache/to/sources
+
+	sudo install -dm755                                /var/lib/to/chroot/lower/var/db/to/data
+	sudo install -dm755                                /var/lib/to/chroot/lower/var/db/to/pkgs
+	sudo install -dm755                                /var/lib/to/chroot/lower/var/cache/to/data
+	sudo install -dm755                                /var/lib/to/chroot/lower/var/cache/to/dist
+
+	sudo install -Dm755 target/release/to           -t /var/lib/to/chroot/lower/usr/bin/
+	sudo install -Dm644 $(wildcard envs/*.env)      -t /var/lib/to/chroot/lower/usr/share/to/envs/
+
+	sudo install -Dm644 $(wildcard git-templates/*) -t /var/lib/to/chroot/lower/usr/share/to/git-templates/
+	sudo install -Dm644 template                    -t /var/lib/to/chroot/lower/usr/share/to/
+	sudo cp -avf scripts                               /var/lib/to/chroot/lower/usr/share/to/
+
+	sudo install -dm755                                /var/lib/to/chroot/lower/etc/to
+	sudo install -Dm644 $(wildcard etc/*)           -t /var/lib/to/chroot/lower/etc/to/
