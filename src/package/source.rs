@@ -233,7 +233,7 @@ impl Package {
                         if !dest.exists()
                             || origin.metadata()?.modified()? > dest.metadata()?.modified()?
                         {
-                            exec!("cp -af '{}' '{}'", origin.display(), dest.display())?;
+                            exec!("cp -af --no-preserve=xattr '{}' '{}'", origin.display(), dest.display())?;
                         }
                     }
                 },

@@ -135,7 +135,7 @@ impl Package {
             cp -vf {}                               pkg     # copy pkg file
             cp -vf /usr/share/to/scripts/runner.sh  runner  # copy runner
 
-            if [ -d {}/A ]; then cp -af {}/A A; fi
+            if [ -d {}/A ]; then cp -af --no-preserve=xattr {}/A A; fi
 
             cp -vf /etc/resolv.conf                 etc/resolf.conf
             if [ -f /etc/to/config.toml ]; then cp -vf /etc/to/config.toml etc/to/config.toml; fi
@@ -284,11 +284,11 @@ impl Package {
             exec!(
                 "
                 if [ -d {UPPER}/etc/ssl/certs ]; then
-                    cp -af {UPPER}/etc/ssl {LOWER}/etc/
+                    cp -af --no-preserve=xattr {UPPER}/etc/ssl {LOWER}/etc/
                 fi
 
                 if [ -d {UPPER}/etc/pki ]; then
-                    cp -af {UPPER}/pki {LOWER}/etc/
+                    cp -af --no-preserve=xattr {UPPER}/pki {LOWER}/etc/
                 fi
                 "
             )
@@ -297,7 +297,7 @@ impl Package {
             exec!(
                 "
                 if [ -d {UPPER}/etc/pki ]; then
-                    cp -af {UPPER}/etc/pki {LOWER}/etc
+                    cp -af --no-preserve=xattr {UPPER}/etc/pki {LOWER}/etc
                 fi
                 "
             )
@@ -313,11 +313,11 @@ impl Package {
             exec!(
                 "
                 if [ -d {UPPER}/opt/rustup/toolchains ]; then
-                    cp -af {UPPER}/opt/rustup/toolchains {LOWER}/opt/rustup/
+                    cp -af --no-preserve=xattr {UPPER}/opt/rustup/toolchains {LOWER}/opt/rustup/
                 fi
 
                 if [ -d {UPPER}/opt/rustup/update-hashes ]; then
-                    cp -af {UPPER}/opt/rustup/update-hashes {LOWER}/opt/rustup/
+                    cp -af --no-preserve=xattr {UPPER}/opt/rustup/update-hashes {LOWER}/opt/rustup/
                 fi
                 "
             )

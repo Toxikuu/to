@@ -54,7 +54,7 @@ register_source() {
         unzip "$src"  -d "$B" || die "Failed to register $src (zip)"
     else
         # git repos, patches, or random shit
-        cp -af "$src"    "$B" || die "Failed to register $src (copy)"
+        cp -af --no-preserve=xattr "$src"    "$B" || die "Failed to register $src (copy)"
     fi
 }
 

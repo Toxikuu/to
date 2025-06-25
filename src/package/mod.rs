@@ -130,7 +130,7 @@ impl Package {
     /// Creates a new package from its pkg file
     #[instrument(level = "debug")]
     fn new(name: &str) -> Self {
-        let out = sex!("/usr/share/to/scripts/gen.sh /var/db/to/pkgs/{name}/pkg").unwrap();
+        let out = sex!("/usr/share/to/scripts/maintainer/gen.sh /var/db/to/pkgs/{name}/pkg").unwrap();
         let lines = out.lines().map(str::trim).collect::<Vec<_>>();
 
         let [n, v, a, m, l, u, vf, t, s, d, kcfg] = &lines[..] else {
