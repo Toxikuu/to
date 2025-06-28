@@ -1,15 +1,15 @@
 use clap::Args;
+use std::process::exit;
 use tracing::{
+    debug,
     error,
     info,
 };
 
 use super::CommandError;
 use crate::{
-    imply_all,
     package::{
-        Package,
-        build::BuildError,
+        all_package_names, build::{get_build_order, BuildError}, Package
     },
 };
 
@@ -17,20 +17,47 @@ use crate::{
 #[derive(Args, Debug)]
 pub struct Command {
     /// Package name, optionally with the version
-    #[arg(value_name = "PACKAGE", num_args = 1..)]
+    ///
+    /// If no packages are specified, every package is built. This differs from normal behavior in
+    /// that the order in which all packages should be built is resolved as well.
+    #[arg(value_name = "PACKAGE", num_args = 0..)]
     pub packages: Vec<String>,
 
-    /// Whether to forcibly build a package
+    /// Forcibly build a package
     #[arg(long, short)]
     pub force: bool,
+
+    /// Only output the build order
+    ///
+    /// This will dump the order in which all packages would be built if no packages are specified.
+    #[arg(long, short = 'o')]
+    pub dump_order: bool,
 }
 
 impl Command {
     pub async fn run(&self) -> Result<(), CommandError> {
-        let pkgs: Vec<Package> = imply_all!(self)
-            .iter()
-            .map(|p| Package::from_s_file(p))
-            .collect::<Result<_, _>>()?;
+        let pkgs = if self.packages.is_empty() {
+            let all_packages = all_package_names()
+                .iter()
+                .map(|p| Package::from_s_file(p))
+                .collect::<Result<_, _>>()?;
+            get_build_order(all_packages)
+        } else {
+            self.packages.iter().map(|p| Package::from_s_file(p)).collect::<Result<_, _>>()?
+        };
+
+        if self.dump_order {
+            debug!("Dumping build order to stdout");
+            for p in &pkgs {
+                println!("{p:-}");
+            }
+            exit(0);
+        }
+
+        info!("Building packages:");
+        for p in &pkgs {
+            info!(" - {p}");
+        }
 
         for pkg in &pkgs {
             match pkg.build(self.force) {
@@ -38,18 +65,18 @@ impl Command {
                     info!(
                         "Not rebuilding {pkg:-}, pass --force or edit its pkgfile to force a rebuild."
                     );
-                    println!(
-                        "Not rebuilding {pkg:-}, pass --force or edit its pkgfile to force a rebuild."
-                    );
+                    // println!(
+                    //     "Not rebuilding {pkg:-}, pass --force or edit its pkgfile to force a rebuild."
+                    // );
                 },
                 | Err(e) => {
                     error!("Failed to build {pkg:-}: {e}");
-                    eprintln!("Failed to build {pkg:-}: {e}");
+                    // eprintln!("Failed to build {pkg:-}: {e}");
                     return Err(CommandError::from(e))
                 },
                 | Ok(_) => {
                     info!("Built {pkg:-}");
-                    println!("Built {pkg:-}");
+                    // println!("Built {pkg:-}");
                 },
             }
         }

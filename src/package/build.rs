@@ -1,6 +1,7 @@
 // package/build.rs
 
 use std::{
+    process::exit,
     fs::{
         copy,
         write,
@@ -9,7 +10,7 @@ use std::{
     path::{
         Path,
         PathBuf,
-    },
+    }
 };
 
 use fshelpers::{
@@ -31,13 +32,9 @@ use super::{
     source::SourceError,
 };
 use crate::{
-    CONFIG,
-    exec,
-    package::{
-        FormError,
-        alias::gather_all_aliases,
-    },
-    utils::file::mtime,
+    exec, package::{
+        alias::gather_all_aliases, dep::DepKind, FormError
+    }, utils::file::mtime, CONFIG
 };
 
 const MERGED: &str = "/var/lib/to/chroot/merged";
@@ -288,7 +285,7 @@ impl Package {
                 fi
 
                 if [ -d {UPPER}/etc/pki ]; then
-                    cp -af --no-preserve=xattr {UPPER}/pki {LOWER}/etc/
+                    cp -af --no-preserve=xattr {UPPER}/etc/pki {LOWER}/etc/
                 fi
                 "
             )
@@ -374,12 +371,111 @@ fn clean_overlay() -> Result<(), BuildError> {
     Ok(())
 }
 
+/// # Returns the order in which all packages should be built
+///
+/// This is only used when building *every* package
+pub fn get_build_order(mut all_packages: Vec<Package>) -> Vec<Package> {
+    debug!("Resolving build order... (this may take a while)");
+    let mut order: Vec<Package> = Vec::new();
+    let original_len = all_packages.len();
+
+    // We initiate a loop. In that loop, we loop through all the packages, pushing them to the
+    // build order if all their dependencies are already in the order. The first iteration of the
+    // lower loop will push packages with zero dependencies to the build order. The second will
+    // push the packages which depend on the packages in the order from the first iteration, and so
+    // on.
+    //
+    // The upper loop will break when the order length is equal to the length of all the packages,
+    // meaning the order has been resolved.
+    //
+    // If the build order length equals the previous build order length, that is, if an iteration
+    // and its subsequent iteration make no progress, we panic, since a circular dependency was
+    // detected, or dependencies could not be resolved, or something along those lines.
+    let mut previous_order_len;
+    loop {
+        previous_order_len = order.len();
+
+        // Break once we've resolved everything.
+        if previous_order_len == original_len {
+            break;
+        }
+
+        trace!("Looping since order length ({}) is less than total length ({original_len})", order.len());
+        let mut i = 0;
+        while i < all_packages.len() {
+            let order_names = order.iter().map(|p| p.name.as_str()).collect::<Vec<_>>();
+            let pkg = &all_packages[i];
+
+            // Find build and required dependencies, extracting their names. This is done to avoid
+            // cycles when runtime dependencies are treated without nuance.
+            let mut dependencies = pkg.dependencies.iter().filter(|d| matches!(d.kind, DepKind::Build | DepKind::Required))
+                .map(|d| d.to_package().unwrap().name);
+
+            if dependencies.all(|d| order_names.contains(&d.as_str())) {
+                let pkg = all_packages.remove(i);
+                trace!("Pushing package {pkg:-} to order since all its dependencies are in the build order");
+                order.push(pkg);
+            } else {
+                trace!("Skipping package {:-} since the build order doesn't contain all its dependencies", all_packages[i]);
+                i += 1;
+            }
+        }
+
+        // Complain when no progress has been made -- typically means a circular dependency. This
+        // shouldn't happen, but if it does, let's also provide some useful debugging information.
+        if previous_order_len == order.len() {
+            debug!("Build order: {:#?}", order.iter().map(|p| p.name.as_str()).collect::<Vec<_>>());
+            for pkg in all_packages {
+                debug!("Dependencies for {pkg:-}: {:#?}", pkg.dependencies.iter().map(|d| d.to_package().unwrap().name).collect::<Vec<_>>());
+            }
+
+            error!("Got stuck resolving build order");
+            exit(1);
+        }
+    }
+
+    debug_assert_eq!(order.len(), original_len); // sanity check
+    debug!("Resolved build order");
+    order
+}
+
 #[cfg(test)]
 mod test {
-    use crate::package::{
-        Package,
-        dep::DepKind,
-    };
+    use crate::package::all_package_names;
+    use crate::package::DepKind;
+    use super::*;
+
+    #[test]
+    fn border() {
+        let all_packages = all_package_names().iter().map(|p| Package::from_s_file(p).unwrap()).collect::<Vec<_>>();
+        let total_len = all_packages.len();
+        let order = get_build_order(all_packages);
+
+        eprintln!("{order:#?}");
+
+        // assert that samu would be built before ninja since the former has fewer dependencies
+        assert!({
+            order.iter().position(|p| p.name == "samu") < order.iter().position(|p| p.name == "ninja")
+        });
+
+        // assert that efibootmgr, which depends on efivar, would be built after efivar
+        assert!({
+            order.iter().position(|p| p.name == "efivar") < order.iter().position(|p| p.name == "efibootmgr")
+        });
+
+        // assert that glibc would be built before gcc
+        assert!({
+            order.iter().position(|p| p.name == "glibc") < order.iter().position(|p| p.name == "gcc")
+        });
+
+        // assert polkit is built after elogind
+        assert!({
+            order.iter().position(|p| p.name == "elogind") < order.iter().position(|p| p.name == "polkit")
+        });
+
+        // assert the length is correct
+        assert_eq!(order.len(), total_len);
+    }
 
     #[test]
     fn depression() {
