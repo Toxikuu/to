@@ -166,3 +166,11 @@ only building if the pkgfile is newer than the distfile.
     - [x] Make an LFStage profile for it
     - [ ] Once `to` is relatively stable, install it to the stage file profile
     (not so sure about this one either; i kinda like destdiring it)
+- [ ] Only check health upon request; make the output more useful
+- [x] Support rebuilding the entire repo
+    - This would be done by resolving the order in which all packages should be
+      built and building.
+
+IDEAS:
+- [ ] Use bubblewrap instead of chroot, allowing for unprivileged building
+    - Maybe pair with fakeroot?
