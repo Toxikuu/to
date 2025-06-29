@@ -115,6 +115,8 @@ impl Package {
             format!("u={u} {vf} | tail -n1")
         } else if is_commit_sha(&self.version) {
             format!("git ls-remote '{u}' HEAD | grep '\\sHEAD$' | cut -f1")
+        } else if u.contains("?C=M") && u.contains("O=D") {
+            format!("n='{}' u='{u}' cr | vfs | sort -V | uniq | tail -n1", self.name)
         } else {
             format!("gr '{u}' | vfs | sort -V | tail -n1")
         };
