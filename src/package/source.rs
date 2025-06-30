@@ -9,7 +9,7 @@ use std::{
     path::PathBuf,
 };
 
-use fshelpers::mkdir_p;
+use fshelpers::{mkdir, mkdir_p};
 use serde::{
     Deserialize,
     Serialize,
@@ -178,7 +178,8 @@ pub enum SourceError {
 
 impl Package {
     // NOTE: This will not be oxidized as so much of this already relies on bash that I'd rather
-    // just continue relying on bash than write hundreds of lines of rust to do the same shit.
+    // just continue relying on bash than write hundreds of lines of rust to do the same shit
+    // worse.
     //
     /// # Fetches all the sources for a package
     /// Accounts for a specific source already existing
@@ -212,6 +213,8 @@ impl Package {
                     }
                 },
 
+                // A package source has all its sources copied from the original package to a
+                // subdirectory sharing its name in the current package's source directory
                 | SourceKind::Pkg => {
                     let name = url;
                     let package = Package::from_s_file(name)?;
@@ -233,6 +236,7 @@ impl Package {
                         if !dest.exists()
                             || origin.metadata()?.modified()? > dest.metadata()?.modified()?
                         {
+                            mkdir(&path)?;
                             exec!("cp -af --no-preserve=xattr '{}' '{}'", origin.display(), dest.display())?;
                         }
                     }
