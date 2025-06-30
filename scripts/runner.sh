@@ -54,7 +54,7 @@ register_source() {
         unzip "$src"  -d "$B" || die "Failed to register $src (zip)"
     else
         # git repos, patches, or random shit
-        cp -af --no-preserve=xattr "$src"    "$B" || die "Failed to register $src (copy)"
+        cp -af --no-preserve=xattr "$src" "$B" || die "Failed to register $src (copy)"
     fi
 }
 
@@ -79,7 +79,7 @@ fi
 
 
 # Try to infer environments from dependencies if unspecified
-if ! type b | grep -q 'with'; then
+if ! type b 2>/dev/null | grep -q 'with'; then
     if [[ ${d[*]} =~ "b,rust" ]]; then with rust; fi
     if [[ ${d[*]} =~ "b,go" ]]; then with go; fi
 
