@@ -32,10 +32,10 @@ use crate::{
 
 /// # Check whether we're in the build chroot
 ///
-/// This checks whether `to` is being run from the build chroot by checking for the existence of
-/// /D. This function is memoized.
+/// This checks whether `to` is being run from the build chroot by checking for the existence and
+/// types of /D and /pkg. This function is memoized.
 pub fn in_build_environment() -> bool {
-    static IN_BUILD_ENV: Lazy<bool> = Lazy::new(|| Path::new("/D").exists());
+    static IN_BUILD_ENV: Lazy<bool> = Lazy::new(|| Path::new("/D").is_dir() && Path::new("/pkg").is_file());
     *IN_BUILD_ENV
 }
 
@@ -106,10 +106,6 @@ impl Package {
                 .permit(|e| matches!(e, InstallError::AlreadyInstalled))
                 .map_err(|e| InstallError::Dependencies(Box::new(e)))?
         }
-
-        // self.install_deps(full_force, !in_chroot, visited, in_chroot)
-        //     .permit(|e| matches!(e, InstallError::AlreadyInstalled))
-        //     .map_err(|e| InstallError::Dependencies(Box::new(e)))?;
 
         let data = &self.datadir();
         let iv = data.join("IV");
