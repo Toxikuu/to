@@ -4,7 +4,8 @@
 
 //! Supported lints include:
 //! - Ensuring default field values are not present
-//! - Ensuring
+//! - Linting for a missed def opportunity
+//! - Linting for a missed il opportunity
 
 use std::{
     fmt,
