@@ -69,6 +69,7 @@ impl Package {
         full_force: bool,
         visited: &mut HashSet<String>, // cheaper to clone than `Package`
         suppress: bool,
+        root: Option<&str>, // the root to which packages are installed, defaulting to /
     ) -> Result<(), InstallError> {
         // Make `full_force` imply `force`
         let force = full_force || force;
@@ -102,7 +103,7 @@ impl Package {
         // Only install runtime dependencies if we aren't in the build environment
         let deps = self.collect_install_deps();
         for dep in deps {
-            dep.install_inner(full_force, full_force, visited, suppress)
+            dep.install_inner(full_force, full_force, visited, suppress, root)
                 .permit(|e| matches!(e, InstallError::AlreadyInstalled))
                 .map_err(|e| InstallError::Dependencies(Box::new(e)))?
         }
@@ -120,11 +121,14 @@ impl Package {
         set -euo pipefail
         source {pkgfile:?}
 
-        if is_function prei; then
-            prei
+        if [ {root} = / ]; then
+            if is_function prei; then
+                prei
+            fi
         fi
 
-        tar xvf '{dist_str}' -C /           \
+        mkdir -p {root}
+        tar xvf '{dist_str}' -C {root}      \
             --keep-directory-symlink        \
             --numeric-owner                 \
             --no-overwrite-dir              \
@@ -135,13 +139,16 @@ impl Package {
             -e 's,/$,,'     |
         tee > {manifest:?}
 
-        if is_function posti; then
-            posti
-        elif is_function i; then
-            i
+        if [ {root} = / ]; then
+            if is_function posti; then
+                posti
+            elif is_function i; then
+                i
+            fi
         fi
 
-        "#
+        "#,
+        root = root.unwrap_or("/")
         )
         .map_err(|_| InstallError::Execution)?;
 
@@ -186,9 +193,10 @@ impl Package {
         force: bool,
         full_force: bool,
         suppress: bool,
+        root: Option<&str>,
     ) -> Result<(), InstallError> {
         let mut visited = HashSet::new();
-        self.install_inner(force, full_force, &mut visited, suppress)
+        self.install_inner(force, full_force, &mut visited, suppress, root)
             .permit(|e| matches!(e, InstallError::AlreadyInstalled))
     }
 }

@@ -25,6 +25,10 @@ pub struct Command {
     /// Whether to suppress messages
     #[arg(long, short)]
     pub suppress_messages: bool,
+
+    /// The root directory for package installation
+    #[arg(long, short)]
+    pub root: Option<String>,
 }
 
 impl Command {
@@ -35,7 +39,7 @@ impl Command {
             .collect::<Result<_, _>>()?;
 
         for pkg in &pkgs {
-            pkg.install(self.force, self.full_force, self.suppress_messages)
+            pkg.install(self.force, self.full_force, self.suppress_messages, self.root.as_deref())
                 .inspect_err(|e| error!("Failed to install {pkg}: {e}"))?;
         }
 
