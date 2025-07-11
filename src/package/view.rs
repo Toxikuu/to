@@ -136,7 +136,7 @@ impl Package {
             distfile = self.distfile().to_string_lossy()
         )?;
 
-        println!("{}", sex!("{tree_command} /var/tmp/to/tree")?);
+        println!("{}", sex!("cd /var/tmp/to/tree; {tree_command}")?);
         Ok(())
     }
 
