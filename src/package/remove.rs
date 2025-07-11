@@ -207,6 +207,9 @@ impl Package {
             },
         };
 
+        // TODO: Add support for prer() here
+        //       This serves as a pre-remove hook in the pkgfile
+
         trace!("Removing paths unique to {self}: {unique:#?}");
         unique.iter().for_each(|p| {
             let path = Path::new("/").join(p);
@@ -222,6 +225,9 @@ impl Package {
 
             trace!("'{p}' -x");
         });
+
+        // TODO: Add support for r() here
+        //       This serves as a post-remove hook in the pkgfile
 
         // This should not fail
         rm(self.datadir().join("IV"))?;
