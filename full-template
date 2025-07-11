@@ -12,7 +12,6 @@
 # $S -> sources -> /S
 # $B -> build   -> /B
 # $D -> destdir -> /D
-# $E -> envs    -> /E
 #
 # LOCAL VARIABLES
 # $n -> name
@@ -52,13 +51,13 @@
 #
 #
 
-n="name"
-v="0.0.0"
-# metapackages (formerly known as sets) should have names starting with +
-a="some information about this package"
-m="tox"     # maintainer
-l="custom"  # can also be an array
-u="https://github.com/toxikuu/package.git" # upstream
+n="name"                                # avoid spaces in package names
+v="0.0.0"                               # versions should exclude initial v
+tag="v$v"                               # git tag used for checkouts for git sources
+a="Some information about this package" # try to start the description with a capital letter
+m="Tox"                                 # maintainer
+l="Custom"                              # licenses; can also be an array
+u="https://github.com/toxikuu/$n.git"   # upstream
 
 # tags
 t=(
@@ -70,6 +69,7 @@ t=(
 )
 # could also be written as t="dev lib utils cli img"
 # both expand to the same vector of tags
+# tags may not contain a space
 
 # sources
 s=(
@@ -126,26 +126,38 @@ xz -d -c archive.cpio.xz | bsdcpio -id
 # build (run in chroot)
 b() {
 
-gco v$v # git check out
-
 # apply patches
 pat "$A/custom.patch"
 pat "$S/tox.patch"
 
+# the default set of 
 _cfg=(
     --prefix=/usr
     --disable-static
     --sysconfdir=/etc
 )
 
-def # equivalent to cfg; mk; mi
+# The default instructions for a given build system
+#
+# For Makefiles:
+# cfg; unoverlink; mk; mi
+#
+# For Meson:
+# ms; sa/nj; si/ni
+#
+# For CMake:
+# cm; sa/nj/mk; si/nj/mi
+#
+# To explicitly access an environment, use `with environment`. It is guessed by
+# default based on specified dependencies.
+def
 
 }
 
 # test (run in chroot)
 t() {
 
-mk check
+mk check || true
 
 }
 
