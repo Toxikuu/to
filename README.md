@@ -64,6 +64,16 @@ bit because there is so much shit to do.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
+- [ ] Add a flag `--no-dependencies` to skip resolving and installing
+  dependencies for `to install`
+- [ ] Add an option to the config to disable logging to stdout
+    - Also add a framework for changing config options for a single run via a
+      flag
+- [x] Add support for `--root=/path/to/destdir` to the install subcommand
+    - Don't bother trying to get `i()` to work with this, and simply mention
+      that post-install instructions aren't supported for `--root` installs
+- [x] Allow `mk check || true` and similar commands
+    - [ ] Test this
 - [ ] Release the stage file somewhere and download it when installing
     - [ ] Add a variable to the makefile to avoid downloading the default
     stagefile
@@ -171,6 +181,6 @@ only building if the pkgfile is newer than the distfile.
     - This would be done by resolving the order in which all packages should be
       built and building.
 
-IDEAS:
+### IDEAS
 - [ ] Use bubblewrap instead of chroot, allowing for unprivileged building
     - Maybe pair with fakeroot?
