@@ -23,5 +23,5 @@ server_address = "http://127.0.0.1:7020"
 package_repo = "https://github.com/Toxikuu/to-pkgs.git"
 package_repo_branch = "master"
 
-# A good minimal alternative is `tree -CF`
-tree_command = "eza -T --color=always --icons=always -F=always --no-quotes -l --total-size"
+# A good minimal alternative is `tree -CF -- *`
+tree_command = "eza -T --color=always --icons=always -F=always --no-quotes -la --total-size -- *"
