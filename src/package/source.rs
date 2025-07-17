@@ -49,24 +49,19 @@ pub fn parse_sources(raw: &str) -> Vec<Source> {
 /// The raw source string can be explicit or implicit with kind and dest.
 /// url -> dest is explicit, otherwise dest is anything after the final /
 /// kind is guessed if not specified at the start with any of the following:
-/// z, -> zip
-/// t, -> tar
+/// d, -> download
 /// g, -> git
 /// p, -> pkg
 ///
 /// A raw source string might look something like the following:
+/// - Download (guess dest): "https://link.to/archive.zip"
+/// - Download (explicit dest): "https://link.to/archive.tar.xz -> source.txz"
+/// - Download (explicit dest, explicit kind): "d,https://link.to/archive.tar.xz -> source.txz"
+///
 /// - Git (guess kind): "https://github.com/toxikuu/to.git"
 /// - Git (explicit kind): "g,https://github.com/toxikuu/to.git -> to"
 /// - Git (guess dest): "https://github.com/toxikuu/to.git"
 /// - Git (explicit dest): "https://github.com/toxikuu/to.git -> to"
-///
-/// - Zip (guess dest): "https://link.to/archive.zip"
-/// - Zip (explicit dest): "https://link.to/archive.zip -> source.zip"
-/// - Zip (guess kind, explicit dest): "https://link.to/archive.zip -> source.zip"
-/// - Zip (explicit kind, explicit dest): "z,https://link.to/archive.zip -> source.zip"
-///
-/// - Tar (guess dest): "https://link.to/archive.tar.xz"
-/// - Tar (explicit dest): "https://link.to/archive.tar.xz -> source.txz"
 ///
 /// - Pkg (guess dest): "linux" # to reuse the linux kernel sources
 /// - Pkg (explicit dest): "linux -> kernel-src"
