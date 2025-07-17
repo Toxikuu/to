@@ -85,7 +85,7 @@ impl Package {
     /// is pretty predictable with a simple `git ls-remote $u HEAD`.
     ///
     /// The gr and vfs bash functions are tentatively defined in `envs/base.env`.
-    pub async fn version_fetch(&self, ignore_cache: bool) -> Result<Option<String>, VfError> {
+    pub async fn version_fetch(&self, ignore_cache: bool, reuse_cache: bool) -> Result<Option<String>, VfError> {
         let Some(u) = &self.upstream else {
             return Ok(None);
         };
@@ -96,7 +96,7 @@ impl Package {
             // Try to uncache
             // TODO: Kinda cursed, not sure if I wanna keep it this way. Maybe I should only cache the
             // upstream version instead of the whole Vf struct.
-            match Vf::uncache(self) {
+            match Vf::uncache(self, reuse_cache) {
                 | Ok(vf) => {
                     debug!("Vf cache hit for {self:-}");
                     return Ok(Some(vf.uv));
@@ -134,8 +134,8 @@ impl Package {
         ))
     }
 
-    pub async fn vf(&self, ignore_cache: bool) -> Result<Vf, VfError> {
-        let uv = self.version_fetch(ignore_cache).await.inspect_err(|e| {
+    pub async fn vf(&self, ignore_cache: bool, reuse_cache: bool) -> Result<Vf, VfError> {
+        let uv = self.version_fetch(ignore_cache, reuse_cache).await.inspect_err(|e| {
             error!("Failed to fetch upstream version for {self:-}: {e}");
         })?;
 
@@ -215,7 +215,7 @@ impl Vf {
             return Err(VfCacheError::NotRecaching)
         }
 
-        let ser = serde_json::to_string_pretty(&self).unwrap(); // PERF: Reference line 190
+        let ser = serde_json::to_string_pretty(&self).unwrap(); // PERF: Reference line 203
         write(cache_file, &ser)?;
         debug!("Cached vf for {}@{}", &self.n, try_shorten(&self.v));
 
@@ -226,22 +226,33 @@ impl Vf {
 
     /// # Attempts to uncache a vf
     /// Won't uncache if there is no cache file or the cache file is more than 4 hours old
+    ///
+    /// # Arguments
+    /// * `package`         - The package whose vf to uncache
+    /// * `reuse_cache`     - Whether to reuse a stale cache
     // TODO: Consider just taking package_name: &str instead of &Package
-    pub fn uncache(package: &Package) -> Result<Vf, VfCacheError> {
+    //
+    // # Arguments
+    //
+    pub fn uncache(package: &Package, reuse_cache: bool) -> Result<Vf, VfCacheError> {
         let cache_file = Vf::cache_file(&package.name);
 
         if !cache_file.exists() {
             return Err(VfCacheError::NoCache)
         }
 
-        let four_hours_ago = SystemTime::now() - Duration::from_hours(4);
-        if cache_file.metadata()?.modified()? < four_hours_ago {
-            rmf(cache_file)?;
-            return Err(VfCacheError::TooOld)
+        // If we aren't reusing the cache, and the cache is more than 4 hours old, remove the cache
+        // and complain about its old age
+        if !reuse_cache {
+            let four_hours_ago = SystemTime::now() - Duration::from_hours(4);
+            if cache_file.metadata()?.modified()? < four_hours_ago {
+                rmf(cache_file)?;
+                return Err(VfCacheError::TooOld)
+            }
         }
 
         let contents = read_to_string(cache_file)?;
-        let vf = serde_json::from_str(&contents).unwrap(); // PERF: Reference line 190
+        let vf = serde_json::from_str(&contents).unwrap(); // PERF: Reference line 203
         Ok(vf)
     }
 }

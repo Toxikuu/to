@@ -22,6 +22,10 @@ pub struct Command {
     /// Ignore the vf cache
     #[arg(long, short)]
     pub ignore_cache: bool,
+
+    /// Reuse the vf cache
+    #[arg(long, short)]
+    pub reuse_cache: bool,
 }
 
 impl Command {
@@ -36,7 +40,8 @@ impl Command {
             .map(|p| {
                 let p_clone = p.clone();
                 let ic = self.ignore_cache;
-                tokio::spawn(async move { p_clone.vf(ic).await })
+                let rc = self.reuse_cache;
+                tokio::spawn(async move { p_clone.vf(ic, rc).await })
             })
             .collect::<Vec<_>>();
 

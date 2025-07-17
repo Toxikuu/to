@@ -37,7 +37,7 @@ impl Command {
                     pkg.name.clone(),
                     pkg.version.clone(),
                     // TODO: Don't unwrap
-                    pkg.version_fetch(true).await.unwrap().unwrap_or_default(),
+                    pkg.version_fetch(true, false).await.unwrap().unwrap_or_default(),
                 )
             };
 
