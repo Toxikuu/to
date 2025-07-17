@@ -113,6 +113,7 @@ command_boilerplate! {
     Edit,
     Generate,
     Lint,
+    Health,
     Push,
     Data,
     Install,
