@@ -7,6 +7,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 # Define opts and their default states
 declare -A OPTS=(
     [la]=on         # delete libtool archives
+    [strip]=on      # strip binaries of debug information
 )
 
 

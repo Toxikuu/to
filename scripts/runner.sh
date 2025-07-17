@@ -126,15 +126,6 @@ is_dest_populated() {
 # Create a package
 if is_dest_populated; then
 
-    # Strip if not disabled
-    if $TO_STRIP; then
-        echo "Stripping binaries"
-        find "${D}" -type f -executable -exec file {} + |
-            grep 'not stripped' |
-            cut -d: -f1         |
-            xargs -r -- strip --strip-unneeded || true
-    fi
-
     # Record package manifest and create tarball
     echo "Creating distfile"
     find "$D" -mindepth 1 |

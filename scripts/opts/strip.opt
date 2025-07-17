@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+find "${D}" -type f -executable -exec file {} + |
+    grep 'not stripped' |
+    cut -d: -f1         |
+    xargs -r -- strip --strip-unneeded || true
