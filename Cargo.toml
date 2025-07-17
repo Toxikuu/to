@@ -22,7 +22,7 @@ filetime = "0.2.25"
 fshelpers = { git = "https://github.com/toxikuu/fshelpers.git" }
 futures = "0.3"
 httpdate = "1.0.3"
-indicatif = "0.17.11"
+indicatif = "0.18"
 memoize = "0.5.1"
 mime_guess = "2.0"
 num_cpus = "1.16.0"
@@ -36,11 +36,11 @@ tempfile = "3.20.0"
 thiserror = "2.0.12"
 tokio = { version = "1.44", features = ["full"] }
 tokio-util = { version = "0.7", features = ["io"] }
-toml = "0.8"
+toml = "0.9"
 tower = "0.5"
 tower-http = { version = "0.6", features = ["limit"] }
 tracing = "0.1"
 tracing-appender = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 walkdir = "2.5"
-which = "7.0.3"
+which = "8"
