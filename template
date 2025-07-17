@@ -19,8 +19,6 @@ b() {
 _cfg=(
 )
 
-cfg
-mk
-mi
+def
 
 }
