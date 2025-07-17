@@ -3,3 +3,4 @@ pub mod debug;
 pub mod exec;
 pub mod file;
 pub mod parse;
+pub mod log;

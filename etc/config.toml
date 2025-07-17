@@ -1,5 +1,6 @@
 # The default log level `to` uses
 log_level = "trace"
+log_to_console = true
 
 # Whether to run tests
 tests = true

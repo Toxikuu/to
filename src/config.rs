@@ -15,15 +15,30 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(Config::load);
 #[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct Config {
+    /// Log level (from trace to off, case insensitive)
     pub log_level:           String,
+    /// Whether to log to the console
+    pub log_to_console:      bool,
+    /// Max log size in bytes
+    pub log_max_size:        u64,
+    // TODO: Move strip to opts
+    /// Whether to strip packages (soon to be removed)
     pub strip:               bool,
+    /// Whether to run tests
     pub tests:               bool,
+    /// Makeflags to use
     pub makeflags:           String,
+    /// Stagefile to use for the build environment
     pub stagefile:           String,
+    /// CFLAGS and CXXFLAGS to pass to the build environment
     pub cflags:              String,
+    /// Command used for `to view --tree <package>`
     pub tree_command:        String,
+    /// Address of the distfileserver
     pub server_address:      String,
+    /// URL for the package repository
     pub package_repo:        String,
+    /// Branch for the package repository
     pub package_repo_branch: String,
 }
 
@@ -31,6 +46,8 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             log_level:           "debug".to_string(),
+            log_to_console:      true,
+            log_max_size:        64 * 1024 * 1024, // 64 MiB
             strip:               true,
             tests:               false,
             makeflags:           format!("-j{n} -l{n}", n = num_cpus::get()),
