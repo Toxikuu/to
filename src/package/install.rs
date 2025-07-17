@@ -6,10 +6,7 @@ use std::{
     path::Path,
 };
 
-use fshelpers::{
-    mkdir_p,
-    mkf_p,
-};
+use fshelpers::mkdir_p;
 use once_cell::sync::Lazy;
 use permitit::Permit;
 use thiserror::Error;
@@ -114,32 +111,26 @@ impl Package {
         let pkgfile = &self.pkgfile();
 
         mkdir_p(data)?;
-        mkf_p("/etc/to/exclude")?; // prevent tar from complaining
         exec!(
             r#"
 
         set -euo pipefail
         source {pkgfile:?}
 
-        if [ {root} = / ]; then
+        if [ "{root}" = "/" ]; then
             if is_function prei; then
                 prei
             fi
         fi
 
-        mkdir -p {root}
-        tar xvf '{dist_str}' -C {root}      \
-            --keep-directory-symlink        \
-            --numeric-owner                 \
-            --no-overwrite-dir              \
-            --exclude=MANIFEST              \
-            --exclude-from=/etc/to/exclude  |
-        sed -e '/^.\/$/d'   \
-            -e '/^$/d'      \
-            -e 's,/$,,'     |
-        tee > {manifest:?}
+        mkdir -p "{root}"
+        tar xf '{dist_str}' -C "{root}" \
+            --keep-directory-symlink    \
+            --numeric-owner             \
+            --no-overwrite-dir
+        mv -f /MANIFEST {manifest:?}
 
-        if [ {root} = / ]; then
+        if [ "{root}" = "/" ]; then
             if is_function posti; then
                 posti
             elif is_function i; then
