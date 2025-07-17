@@ -21,9 +21,6 @@ pub struct Config {
     pub log_to_console:      bool,
     /// Max log size in bytes
     pub log_max_size:        u64,
-    // TODO: Move strip to opts
-    /// Whether to strip packages (soon to be removed)
-    pub strip:               bool,
     /// Whether to run tests
     pub tests:               bool,
     /// Makeflags to use
@@ -48,7 +45,6 @@ impl Default for Config {
             log_level:           "debug".to_string(),
             log_to_console:      true,
             log_max_size:        64 * 1024 * 1024, // 64 MiB
-            strip:               true,
             tests:               false,
             makeflags:           format!("-j{n} -l{n}", n = num_cpus::get()),
             stagefile:           "/usr/share/to/stagefile.tar.xz".to_string(),

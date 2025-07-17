@@ -243,13 +243,11 @@ impl Package {
                 MAKEFLAGS="{makeflags}" \
                 CXXFLAGS="{cflags}"     \
                 CFLAGS="{cflags}"       \
-                TO_STRIP={strip}        \
                 TO_TEST={tests}         \
             /runner
         "#,
             makeflags = &CONFIG.makeflags,
             cflags = &CONFIG.cflags,
-            strip = CONFIG.strip,
             tests = CONFIG.tests,
         )
         .map_err(|_| BuildError::Build)

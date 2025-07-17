@@ -5,9 +5,6 @@ log_to_console = true
 # Whether to run tests
 tests = true
 
-# Whether to strip debugging symbols from binaries
-strip = true
-
 # Flags passed to `make`
 makeflags = "-j16"
 
