@@ -196,14 +196,14 @@ impl Package {
                             r#"  cd '{s}' && source '{p}' && git fetch --depth=1 origin "${{tag:-{v}}}" && gco "${{tag:-{v}}}"  "#,
                             s = path.display(),
                             p = pkgfile.display(),
-                            v = self.version,
+                            v = self.version.version,
                         )?;
                     } else {
                         exec!(
                             r#"  source '{p}' && git clone --depth=1 --recursive '{url}' '{s}' && cd '{s}' && gco "${{tag:-{v}}}"  "#,
                             p = pkgfile.display(),
                             s = path.display(),
-                            v = self.version,
+                            v = self.version.version,
                         )?;
                     }
                 },

@@ -30,12 +30,12 @@ impl Command {
         for pkg in &self.packages {
             let (name, oldv, newv) = if let Some((name, newv)) = pkg.split_once('@') {
                 let pkg = Package::from_s_file(name)?;
-                (pkg.name, pkg.version, newv.to_string())
+                (pkg.name, pkg.version.version, newv.to_string())
             } else {
                 let pkg = Package::from_s_file(pkg)?;
                 (
                     pkg.name.clone(),
-                    pkg.version.clone(),
+                    pkg.version.version.clone(),
                     // TODO: Don't unwrap
                     pkg.version_fetch(true, false).await.unwrap().unwrap_or_default(),
                 )

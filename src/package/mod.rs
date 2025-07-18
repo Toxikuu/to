@@ -16,7 +16,7 @@ pub mod view;
 
 use std::{
     fmt,
-    fs::read_to_string,
+    fs::read_to_string, str::FromStr,
 };
 
 use dep::DepKind;
@@ -46,6 +46,7 @@ use crate::{
     },
     sex,
     utils::parse::us_array,
+    utils::commit_hash::try_shorten,
 };
 
 #[derive(Error, Debug)]
@@ -109,7 +110,7 @@ pub enum FormError {
 #[derive(Deserialize, Serialize, Debug, Clone, Eq, Hash, PartialEq)]
 pub struct Package {
     pub name:       String,
-    pub version:    String,
+    pub version:    Version,
     pub about:      String,
     pub maintainer: String,
     pub licenses:   Vec<String>,
@@ -126,6 +127,37 @@ pub struct Package {
     pub depkind: Option<DepKind>,
 }
 
+#[derive(Deserialize, Serialize, Debug, Clone, Eq, Hash, PartialEq)]
+pub struct Version {
+    pub version: String,
+    pub release: u8,
+}
+
+#[derive(Debug)]
+pub struct ParseVersionError;
+
+impl FromStr for Version {
+    type Err = ParseVersionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (version, release) = s.rsplit_once('-').unwrap_or((s, "1"));
+        Ok(Self {
+            version: version.to_string(),
+            release: release.parse().map_err(|_| ParseVersionError)?
+        })
+    }
+}
+
+impl Version {
+    pub fn srversion(&self) -> String {
+        format!("{}-{}", try_shorten(&self.version), self.release)
+    }
+
+    pub fn rversion(&self) -> String {
+        format!("{}-{}", &self.version, self.release)
+    }
+}
+
 impl Package {
     /// Creates a new package from its pkg file
     #[instrument(level = "debug")]
@@ -133,11 +165,13 @@ impl Package {
         let out = sex!("/usr/share/to/scripts/maintainer/gen.sh /var/db/to/pkgs/{name}/pkg").unwrap();
         let lines = out.lines().map(str::trim).collect::<Vec<_>>();
 
-        let [n, v, a, m, l, u, vf, t, s, d, kcfg] = &lines[..] else {
+        let [n, v, r, a, m, l, u, vf, t, s, d, kcfg] = &lines[..] else {
             panic!("Shouldn't happen lol")
         };
 
         let u = if u.is_empty() { None } else { Some(u.to_string()) };
+        let r = if r.is_empty() { 1u8 } else { r.parse::<u8>().expect("Supplied release is not a u8") };
+        let vr = format!("{v}-{r}");
 
         let vf = if vf.is_empty() { None } else { Some(vf.to_string()) };
 
@@ -149,7 +183,7 @@ impl Package {
 
         Self {
             name: n.to_string(),
-            version: v.to_string(),
+            version: vr.parse().inspect_err(|e| error!("Failed to parse release version for package '{name}'")).unwrap(),
             about: a.to_string(),
             maintainer: m.to_string(),
             licenses: l,
@@ -166,6 +200,22 @@ impl Package {
     #[allow(dead_code)]
     pub fn is_dependency(&self) -> bool { self.depkind.is_some() }
 
+    /// Return the package version and the release as version-release:
+    ///
+    /// Example:
+    /// 1.2.3-2
+    pub fn rversion(&self) -> String {
+        format!("{}-{}", self.version.version, self.version.release)
+    }
+
+    /// Return the shortened package version and the release as version-release:
+    ///
+    /// Example:
+    /// 1.2.3-2
+    pub fn srversion(&self) -> String {
+        format!("{}-{}", try_shorten(&self.version.version), self.version.release)
+    }
+
     #[instrument(level = "debug")]
     pub fn from_s_file(name: &str) -> Result<Self, FormError> {
         let s_file = format!("/var/db/to/pkgs/{name}/s");
@@ -180,10 +230,8 @@ impl Package {
 /// See the documentation for `Package`
 impl fmt::Display for Package {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use crate::utils::commit_hash::try_shorten;
-
         if f.sign_minus() {
-            write!(f, "{}@{}", self.name, try_shorten(&self.version))
+            write!(f, "{}@{}", self.name, self.srversion())
         } else if f.sign_plus() {
             // WARN: This branch ({package:+} formatting) is very subject to change
             if !self.is_installed() {
@@ -191,30 +239,28 @@ impl fmt::Display for Package {
                     f,
                     "  \x1b[30;1m{}@{}\x1b[0m",
                     self.name,
-                    try_shorten(&self.version)
+                    self.srversion()
                 )
             } else if self.is_current() {
                 write!(
                     f,
                     "  \x1b[32;1m{}@{}\x1b[0m",
                     self.name,
-                    try_shorten(&self.version)
+                    self.srversion()
                 )
             } else {
                 write!(
                     f,
                     "  \x1b[31;1m{}@{iv} -> {}\x1b[0m",
                     self.name,
-                    try_shorten(&self.version),
-                    iv = try_shorten(
-                        &self
-                            .installed_version()
+                    self.srversion(),
+                    iv = &self.installed_version()
                             .expect("Package is installed but iv not found")
-                    )
+                            .srversion()
                 )
             }
         } else {
-            write!(f, "{}@{}", self.name, self.version)
+            write!(f, "{}@{}", self.name, self.srversion())
         }
     }
 }

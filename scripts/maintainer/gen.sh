@@ -7,6 +7,7 @@ source "$1"
 # export the variables
 echo "$n"
 echo "$v"
+echo "$r"
 echo "$a"
 echo "$m"
 (IFS=$'\x1f'; echo "${l[*]}")
