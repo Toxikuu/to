@@ -427,6 +427,7 @@ pub fn get_build_order(mut all_packages: Vec<Package>) -> Vec<Package> {
                 debug!("Dependencies for {pkg:-}: {:#?}", pkg.dependencies.iter().map(|d| d.to_package().unwrap().name).collect::<Vec<_>>());
             }
 
+            debug!("Build order length: {previous_order_len}");
             error!("Got stuck resolving build order");
             exit(1);
         }
