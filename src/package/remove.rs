@@ -168,7 +168,7 @@ pub enum RemoveError {
 impl Package {
     pub fn manifest(&self) -> Option<PathBuf> {
         self.installed_version()
-            .map(|iv| self.datadir().join(format!("MANIFEST@{iv}")))
+            .map(|iv| self.datadir().join(format!("MANIFEST@{}", iv.srversion())))
     }
 
     pub fn remove(
@@ -292,10 +292,10 @@ pub fn find_dead_files(package: &Package) -> Result<Vec<String>, RemoveError> {
 
     // Calculate the old manifest from the yet-unoverwritten IV
     let old_manifest = PathBuf::from(format!(
-        "/var/db/to/data/{}/MANIFEST@{iv}",
+        "/var/db/to/data/{}/MANIFEST@{}",
         package.name,
-        iv = match package.installed_version() {
-            | Some(v) => v,
+        match package.installed_version() {
+            | Some(v) => v.srversion(),
             | None => {
                 error!("IV exists but manifest doesn't?");
                 return Err(RemoveError::NotInstalled)

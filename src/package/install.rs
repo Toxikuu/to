@@ -107,7 +107,7 @@ impl Package {
 
         let data = &self.datadir();
         let iv = data.join("IV");
-        let manifest = data.join(format!("MANIFEST@{version}"));
+        let manifest = data.join(format!("MANIFEST@{}", version.srversion()));
         let pkgfile = &self.pkgfile();
 
         mkdir_p(data)?;
@@ -152,7 +152,7 @@ impl Package {
                 info!(
                     "Removed dead files for {}@{}",
                     self.name,
-                    installed_version.unwrap()
+                    installed_version.unwrap().srversion()
                 )
             }
 
@@ -162,7 +162,7 @@ impl Package {
         }
 
         // We write the version after removing dead files
-        fs::write(iv, version)?;
+        fs::write(iv, version.rversion())?;
         info!("Installed {self:-}");
         Ok(())
     }

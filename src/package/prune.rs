@@ -56,7 +56,7 @@ impl Package {
                     !f.file_name()
                         .to_string_lossy()
                         .to_string()
-                        .contains(version)
+                        .contains(&version.srversion())
                 })
                 .map(|f| f.path())
                 .collect::<Vec<_>>()
@@ -72,7 +72,7 @@ impl Package {
                 .filter(|f| {
                     let file_name = f.file_name().to_string_lossy().to_string();
                     // Filter for files that are manifests, but that aren't the current version
-                    !file_name.ends_with(version) && file_name.starts_with("MANIFEST@")
+                    !file_name.ends_with(&version.srversion()) && file_name.starts_with("MANIFEST@")
                 })
                 .map(|f| f.path())
                 .collect::<Vec<_>>()

@@ -49,7 +49,9 @@ finalize() {
 
 . ./pkg
 old="$v"
-sed "s/$old/$new/g" -i pkg
+sed -e "s/$old/$new/g" \
+    -e 's/r=.*/r="1"/' \
+    -i pkg
 
 if $AUTO; then
     finalize || die "Failed to finalize ($?) -- giving up..."

@@ -8,6 +8,9 @@ n="${n,,}"
 
 cd /var/db/to/pkgs/"$n"
 
+. ./pkg
+sed -i "s/^r=.*/r=\"$((r + 1))\"/" ./pkg
+
 check_existence() {
     if [ ! -e "pkg" ]; then
         echo "Package '$n' does not exist" >&2

@@ -20,6 +20,14 @@ pub struct Command {
     #[arg(long, short = 'V')]
     pub version: bool,
 
+    /// Print the release version of a package
+    #[arg(long)]
+    pub rversion: bool,
+
+    /// Print the short release version of a package
+    #[arg(long)]
+    pub srversion: bool,
+
     /// Print the installed version of a package
     #[arg(long, short = 'I')]
     pub installed_version: bool,
@@ -34,11 +42,19 @@ impl Command {
         let pkg = Package::from_s_file(&self.package)?;
 
         if self.version {
-            println!("{}", pkg.version);
+            println!("{}", pkg.version.version);
+        }
+
+        if self.rversion {
+            println!("{}", pkg.rversion());
+        }
+
+        if self.srversion {
+            println!("{}", pkg.srversion());
         }
 
         if self.installed_version {
-            println!("{}", pkg.installed_version().unwrap_or_default())
+            println!("{}", pkg.installed_version().map(|v| v.srversion()).unwrap_or_default())
         }
 
         if self.upstream {

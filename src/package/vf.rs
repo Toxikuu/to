@@ -113,7 +113,7 @@ impl Package {
                 return Ok(None);
             }
             format!("u={u} {vf} | tail -n1")
-        } else if is_commit_sha(&self.version) {
+        } else if is_commit_sha(&self.version.version) {
             format!("git ls-remote '{u}' HEAD | grep '\\sHEAD$' | cut -f1")
         } else if u.contains("?C=M") && u.contains("O=D") {
             format!("n='{}' u='{u}' cr | vfs | sort -V | uniq | tail -n1", self.name)
@@ -140,7 +140,7 @@ impl Package {
         })?;
 
         let n = &self.name;
-        let v = &self.version;
+        let v = &self.version.version;
 
         match uv {
             | Some(uv) => {
@@ -244,7 +244,8 @@ impl Vf {
         // If we aren't reusing the cache, and the cache is more than 4 hours old, remove the cache
         // and complain about its old age
         if !reuse_cache {
-            let four_hours_ago = SystemTime::now() - Duration::from_hours(4);
+            // TODO: Use Duration::from_hours(4) when stable
+            let four_hours_ago = SystemTime::now() - Duration::from_secs(4 * 3600);
             if cache_file.metadata()?.modified()? < four_hours_ago {
                 rmf(cache_file)?;
                 return Err(VfCacheError::TooOld)

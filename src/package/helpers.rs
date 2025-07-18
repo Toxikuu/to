@@ -5,19 +5,17 @@ use std::{
     path::PathBuf,
 };
 
-use tracing::instrument;
+use tracing::{error, instrument};
 
-use super::Package;
+use super::{Package, Version};
 
 impl Package {
     #[instrument(level = "debug")]
-    pub fn installed_version(&self) -> Option<String> {
+    pub fn installed_version(&self) -> Option<Version> {
         if self.is_installed() {
-            Some(
-                read_to_string(self.datadir().join("IV"))
-                    .map(|s| s.trim().to_string())
-                    .unwrap_or_else(|e| format!("Failed to read IV for {self}: {e}")),
-            )
+            read_to_string(self.datadir().join("IV"))
+                .ok()
+                .and_then(|s| s.trim().parse().inspect_err(|e| error!("Failed to parse IV for {self}: {e:?}")).ok())
         } else {
             None
         }
