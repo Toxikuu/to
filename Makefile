@@ -24,8 +24,8 @@ else
 	VERSION=$(VERSION) cargo +nightly build --release --no-default-features
 endif
 
+# TODO: Clean docs as well once I write some
 clean:
-	# TODO: Clean docs as well once I write some
 	rm -f config.mk
 	cargo clean
 
