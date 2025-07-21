@@ -190,6 +190,11 @@ impl Package {
     /// ```
     #[instrument(skip(self, filter), level = "debug")]
     pub fn resolve_deps(&self, filter: impl Fn(DepKind) -> bool + Copy) -> Vec<Package> {
+        if self.dependencies.is_empty() {
+            debug!("No dependencies for {self:-}");
+            return vec![]
+        }
+
         debug!("Resolving dependencies for {self:-}");
         let mut resolved = HashSet::new();
         let mut seen = HashSet::new();
