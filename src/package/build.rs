@@ -241,13 +241,17 @@ impl Package {
         chroot {MERGED} \
             /usr/bin/env -i             \
                 MAKEFLAGS="{makeflags}" \
+                RUSTFLAGS="{rustflags}" \
                 CXXFLAGS="{cflags}"     \
+                FCFLAGS="{cflags}"      \
                 CFLAGS="{cflags}"       \
+                FFLAGS="{cflags}"       \
                 TO_TEST={tests}         \
             /runner
         "#,
             makeflags = &CONFIG.makeflags,
             cflags = &CONFIG.cflags,
+            rustflags = &CONFIG.rustflags,
             tests = CONFIG.tests,
         )
         .map_err(|_| BuildError::Build)
