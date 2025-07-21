@@ -243,7 +243,7 @@ impl Package {
             .filter(|d| !deps.contains(d))
             .collect::<Vec<_>>();
 
-        // Tack on extra dependencies
+        // Tack on build dependencies
         deps.extend(build_deps);
         deps.extend(deep_build_deps);
 

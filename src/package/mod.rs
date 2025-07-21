@@ -170,7 +170,7 @@ impl Package {
         };
 
         let u = if u.is_empty() { None } else { Some(u.to_string()) };
-        let r = if r.is_empty() { 1u8 } else { r.parse::<u8>().expect("Supplied release is not a u8") };
+        let r = if r.is_empty() { 1u8 } else { r.parse::<u8>().unwrap_or_else(|_| panic!("Supplied release '{r}' for {n} is not a u8")) };
         let vr = format!("{v}-{r}");
 
         let vf = if vf.is_empty() { None } else { Some(vf.to_string()) };

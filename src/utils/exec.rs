@@ -50,6 +50,8 @@ pub fn sex(command: &str) -> io::Result<String> {
 }
 
 pub fn exec(command: &str) -> io::Result<()> {
+    // TODO: Consult bash invocation and clean up the prepending shit with the --rcfile flag or
+    // whatever
     let command = prepend_source_base(command);
     let command_clone = command.clone();
 
