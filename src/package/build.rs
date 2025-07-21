@@ -104,7 +104,7 @@ impl Package {
 
         exec!(
             "
-            source {pkgfile}
+            tource {pkgfile}
             if is_function p; then
                 echo 'Executing pre-build steps for {self}'
                 p

@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 set -euo pipefail
 
-. /pkg || die "Failed to source /pkg"
+tource /pkg || die "Failed to source /pkg"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 # Define opts and their default states

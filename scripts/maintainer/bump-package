@@ -19,7 +19,7 @@ check_existence() {
 
 finalize() {
 
-    . ./pkg
+    tource ./pkg
 
     to generate  "$n" || return 3
     to lint      "$n" || return 2
@@ -47,10 +47,10 @@ finalize() {
 
 }
 
-. ./pkg
+tource ./pkg
 old="$v"
-sed -e "s/$old/$new/g" \
-    -e 's/r=.*/r="1"/' \
+sed -e "s|$old|$new|g"      \
+    -e '1s|-[0-9]\+$|-1|'   \
     -i pkg
 
 if $AUTO; then

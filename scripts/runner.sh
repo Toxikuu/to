@@ -27,7 +27,7 @@ fi
 
 # Source stuff
 source /usr/share/to/envs/base.env
-source /pkg
+tource /pkg
 
 
 # Enter the build directory

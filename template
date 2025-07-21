@@ -1,8 +1,5 @@
-#!/to
+NAME@VERSION-1
 
-n="NAME"
-v="VERSION"
-r="1"
 a="ABOUT"
 m="MAINTAINER"
 l="LICENSE"

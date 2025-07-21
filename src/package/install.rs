@@ -115,7 +115,7 @@ impl Package {
             r#"
 
         set -euo pipefail
-        source {pkgfile:?}
+        tource {pkgfile:?}
 
         if [ "{root}" = "/" ]; then
             if is_function prei; then

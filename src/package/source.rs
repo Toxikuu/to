@@ -193,14 +193,14 @@ impl Package {
                         // NOTE: This is probably overkill and redundant, but I'm not a git wizard.
                         exec!(
                             // TODO: Try dropping the `git fetch --depth=1 origin` part
-                            r#"  cd '{s}' && source '{p}' && git fetch --depth=1 origin "${{tag:-{v}}}" && gco "${{tag:-{v}}}"  "#,
+                            r#"  cd '{s}' && tource '{p}' && git fetch --depth=1 origin "${{tag:-{v}}}" && gco "${{tag:-{v}}}"  "#,
                             s = path.display(),
                             p = pkgfile.display(),
                             v = self.version.version,
                         )?;
                     } else {
                         exec!(
-                            r#"  source '{p}' && git clone --depth=1 --recursive '{url}' '{s}' && cd '{s}' && gco "${{tag:-{v}}}"  "#,
+                            r#"  tource '{p}' && git clone --depth=1 --recursive '{url}' '{s}' && cd '{s}' && gco "${{tag:-{v}}}"  "#,
                             p = pkgfile.display(),
                             s = path.display(),
                             v = self.version.version,

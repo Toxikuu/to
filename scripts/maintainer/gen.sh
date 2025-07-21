@@ -2,7 +2,8 @@
 # Script to (help) generate a package from its package file
 # shellcheck disable=2154,1090
 
-source "$1"
+# pkg looks like n@v-r
+tource "$1"
 
 # export the variables
 echo "$n"
