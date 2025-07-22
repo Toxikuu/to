@@ -144,6 +144,7 @@ mod test {
         )
     }
 
+    #[ignore = "intrusive"]
     #[test]
     fn retain_alias_structure() {
         let pkg = Package::from_s_file("ogg").unwrap();
