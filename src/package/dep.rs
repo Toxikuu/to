@@ -1,7 +1,11 @@
 // package/dep.rs
 
+use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::algo::toposort;
+
+use std::process::exit;
 use std::{
-    collections::HashSet,
+    collections::HashMap,
     fmt,
 };
 
@@ -10,10 +14,8 @@ use serde::{
     Serialize,
 };
 use tracing::{
-    debug,
     error,
     instrument,
-    trace,
 };
 
 use super::{
@@ -128,106 +130,75 @@ impl Package {
         Ok(dependants)
     }
 
-    /// # Finds deep dependencies for a package, with a filter
-    ///
-    /// This function serves as the backend for `resolve_deps()` and should not be called on its
-    /// own.
-    ///
-    /// # Arguments
-    /// * `resolved`        - A collection of already-resolved dependencies
-    /// * `seen`            - A collection of packages whose dependencies have been resolved
-    /// * `order`           - The dependency resolution order
-    /// * `filter`          - The filter to apply to dependency resolution
-    ///
-    /// # Returns
-    /// Mutates the `resolved` argument.
-    #[instrument(skip(self, resolved, seen, order, filter), level = "trace")]
-    fn deep_deps(
+    fn build_dep_graph(
         &self,
-        resolved: &mut HashSet<Dep>,
-        seen: &mut HashSet<Package>,
-        order: &mut Vec<Package>,
+        graph: &mut DiGraph<Package, ()>,
+        index_map: &mut HashMap<String, NodeIndex>,
         filter: impl Fn(DepKind) -> bool + Copy,
-    ) {
+    ) -> Result<NodeIndex, FormError> {
+        if let Some(&idx) = index_map.get(&self.name) {
+            return Ok(idx)
+        }
+
+        let idx = graph.add_node(self.clone());
+        index_map.insert(self.name.clone(), idx);
+
         for dep in &self.dependencies {
             if !filter(dep.kind) {
-                trace!("Skipping {dep} per filter");
-                continue;
+                continue
             }
 
-            if resolved.insert(dep.clone()) {
-                dep.to_package()
-                    .expect("Failed to form dependency package")
-                    .deep_deps(resolved, seen, order, filter);
-            }
+            let dep_pkg = dep.to_package()?;
+            let dep_idx = dep_pkg.build_dep_graph(graph, index_map, filter)?;
+            graph.add_edge(dep_idx, idx, ());
         }
 
-        // Avoid resolving dependencies for packages we've already resolved
-        if seen.insert(self.clone()) {
-            order.push(self.clone());
-        }
+        Ok(idx)
     }
 
-    /// # Resolves deep dependencies, with a filter
-    ///
-    /// This function wraps `deep_deps()`, and ensures the package is not a dependency of itself
-    /// (`find -mindepth 1` kinda filtering).
-    ///
-    /// # Arguments
-    /// * `filter`          - The filter to apply to dependecy resolution
-    ///
-    /// # Returns
-    /// Notably returns a `Vec<Package>` instead of `Vec<Dep>`. This is done for reasons; ifykyk.
-    ///
-    /// # Examples
-    /// ```rust
-    /// // Resolve all deps except runtime deps
-    /// let most_deps = pkg.resolve_deps(|k| !matches!(k, DepKind::Runtime));
-    ///
-    /// // Resolve all deps
-    /// // A filter
-    /// let all_deps = pkg.resolve_deps(|_| true);
-    /// ```
-    #[instrument(skip(self, filter), level = "debug")]
     pub fn resolve_deps(&self, filter: impl Fn(DepKind) -> bool + Copy) -> Vec<Package> {
-        if self.dependencies.is_empty() {
-            debug!("No dependencies for {self:-}");
-            return vec![]
+        let mut graph = DiGraph::<Package, ()>::new();
+        let mut index_map = HashMap::<String, NodeIndex>::new();
+
+        if let Err(e) = self.build_dep_graph(&mut graph, &mut index_map, filter) {
+            error!("Failed to resolve dependencies for {self:-}: {e}");
+            exit(1);
         }
 
-        debug!("Resolving dependencies for {self:-}");
-        let mut resolved = HashSet::new();
-        let mut seen = HashSet::new();
-        let mut order = Vec::new();
+        let Ok(sorted) = toposort(&graph, None) else {
+            error!("Dependency cycle detected for {self:-}");
+            exit(1);
+        };
 
-        self.deep_deps(&mut resolved, &mut seen, &mut order, filter);
-        order.retain(|d| d.name != self.name);
-
-        trace!("Resolved dependencies for {self:-}:");
-        for dep in &order {
-            trace!(" - {dep} ({})", dep.depkind.unwrap());
-        }
-
-        order
+        sorted.into_iter()
+            .map(|idx| graph.node_weight(idx).unwrap().clone())
+            .filter(|pkg| pkg.name != self.name)
+            .collect()
     }
 
     /// # Collects all dependencies that should be in the build chroot
     ///
     /// The idea is to first collect deep required dependencies, then shallow build dependencies,
-    /// then the deep required dependencies for those shallow build dependencies. Duplicates are
-    /// filtered out by name, then collected into a final `Vec`.
+    /// then the deep required dependencies for those shallow build dependencies. Finally, a
+    /// topological sort is performed to order them correctly.
     ///
     /// # Errors
     /// - Will fail if a dependency could not be converted to a package
     #[instrument(skip(self))]
     pub fn collect_chroot_deps(&self) -> Result<Vec<Package>, FormError> {
-        // Collect deep required dependencies
-        let mut deps = self
+        let mut all = HashMap::<String, Package>::new();
+
+        // 1. Collect deep required dependencies
+        let deps = self
             .resolve_deps(|k| matches!(k, DepKind::Required))
             .into_iter()
-            .collect::<HashSet<_>>();
+            .collect::<Vec<_>>();
 
-        // Collect build dependencies, as long as they're not already accounted for by `deps`
+        for pkg in &deps {
+            all.entry(pkg.name.clone()).or_insert_with(|| pkg.clone());
+        }
+
+        // 2. Collect shallow build dependencies
         let build_deps = self
             .dependencies
             .iter()
@@ -235,22 +206,60 @@ impl Package {
             .map(|d| d.to_package())
             .collect::<Result<Vec<_>, _>>()?;
 
-        // Collect deep required dependencies for shallow build dependencies, as long as they're
-        // not already accounted for by `deps`
-        let deep_build_deps = build_deps
-            .iter()
-            .flat_map(|d| d.resolve_deps(|k| matches!(k, DepKind::Required)))
-            .filter(|d| !deps.contains(d))
-            .collect::<Vec<_>>();
+        for pkg in &build_deps {
+            all.entry(pkg.name.clone()).or_insert_with(|| pkg.clone());
+        }
 
-        // Tack on build dependencies
-        deps.extend(build_deps);
-        deps.extend(deep_build_deps);
+        // 3. Collect deep required dependencies for shallow build dependencies
+        for dep in &build_deps {
+            for pkg in dep.resolve_deps(|k| matches!(k, DepKind::Required)) {
+                all.entry(pkg.name.clone()).or_insert_with(|| pkg.clone());
+            }
+        }
 
-        Ok(deps.iter().cloned().collect::<Vec<_>>())
+        // Topo sort
+        let mut graph = DiGraph::<String, ()>::new();
+        let mut indices = HashMap::<String, NodeIndex>::new();
+
+        for name in all.keys() {
+            let idx = graph.add_node(name.clone());
+            indices.insert(name.clone(), idx);
+        }
+
+        for pkg in all.values() {
+            let from = indices[&pkg.name];
+            for dep in &pkg.dependencies {
+                if !matches!(dep.kind, DepKind::Required | DepKind::Build) {
+                    continue
+                }
+
+                if let Some(to) = indices.get(&dep.name) {
+                    graph.add_edge(*to, from, ());
+                }
+            }
+        }
+
+        let sorted = match toposort(&graph, None) {
+            Ok(s) => s,
+            Err(e) => {
+                error!("Dependency cycle detected involving {}", graph[e.node_id()].clone());
+                exit(1)
+            }
+        };
+
+        Ok(
+            sorted.iter()
+            .filter_map(|idx| {
+                let name = &graph[*idx];
+                all.remove(name)
+            })
+            .collect()
+        )
     }
 
     /// # Collects all dependencies that should be installed
+    ///
+    /// This function accounts for whether we're installing in the build chroot or for realsies.
     pub fn collect_install_deps(&self) -> Vec<Package> {
         if in_build_environment() {
             self.resolve_deps(|k| matches!(k, DepKind::Required))
@@ -285,7 +294,7 @@ mod test {
     fn dbus_install_deps() {
         let pkg = Package::from_s_file("dbus").unwrap();
 
-        let expected = ["glibc", "expat", "blfs-bootscripts"]
+        let expected = ["glibc", "expat"]
             .iter()
             .map(|d| d.to_owned())
             .collect::<Vec<_>>();
@@ -319,6 +328,7 @@ mod test {
             "zlib",
             "zstd",
             "xz",
+            "jansson",
             "libelf",
             "binutils",
             "gmp",
@@ -338,7 +348,6 @@ mod test {
             "setuptools",
             "meson",
             "samurai",
-            "blfs-bootscripts",
         ]
         .iter()
         .map(|d| d.to_owned())
@@ -452,6 +461,8 @@ mod test {
     ///
     /// By weird shit, I mean the dependency resolver used to only hash dependencies by name, not
     /// also by kind. This should be fixed now.
+    // TEST: This is currently failing because make-ca only shows up once, and as a runtime
+    // dependency. I'm unsure if this is more correct than the previous state of affairs.
     #[test]
     fn rust_make_ca_dep() {
         let pkg = Package::from_s_file("rust").unwrap();

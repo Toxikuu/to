@@ -38,7 +38,7 @@ cd "$B"
 if [ -f /deps ]; then
     echo "Installing dependencies..."
     # shellcheck disable=SC2046
-    to install --suppress-messages $(</deps)
+    to install -ds $(</deps)
 fi
 
 
