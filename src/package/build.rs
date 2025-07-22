@@ -377,7 +377,7 @@ fn clean_overlay() -> Result<(), BuildError> {
 ///
 /// This is only used when building *every* package
 pub fn get_build_order(mut all_packages: Vec<Package>) -> Vec<Package> {
-    debug!("Resolving build order... (this may take a while)");
+    debug!("Resolving build order...");
     let mut order: Vec<Package> = Vec::new();
     let original_len = all_packages.len();
 
