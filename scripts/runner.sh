@@ -25,12 +25,8 @@ EOF
 fi
 
 
-# Source stuff
+# Source base environment and enter build directory
 source /usr/share/to/envs/base.env
-tource /pkg
-
-
-# Enter the build directory
 cd "$B"
 
 
@@ -40,6 +36,9 @@ if [ -f /deps ]; then
     # shellcheck disable=SC2046
     to install -ds $(</deps)
 fi
+
+# Source package
+tource /pkg
 
 
 # Extract zips and tarballs; copy other sources to $B
