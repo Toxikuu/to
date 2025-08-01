@@ -10,18 +10,17 @@ VERSION    ?= $(shell ./version.sh)
 all: build
 
 check:
-	checkmake Makefile
-	VERSION=TEST cargo nextest run
+	VERSION=TEST cargo test
 
 test: check
 
 build:
 ifeq ($(ENABLE_TOOLS),1)
 	@echo "Building to with tools..."
-	VERSION=$(VERSION) cargo +nightly build --release
+	VERSION=$(VERSION) cargo build --release
 else
 	@echo "Building to..."
-	VERSION=$(VERSION) cargo +nightly build --release --no-default-features
+	VERSION=$(VERSION) cargo build --release --no-default-features
 endif
 
 # TODO: Clean docs as well once I write some
@@ -84,7 +83,7 @@ uninstall:
 	@echo "You may also want to remove $(DESTDIR)/etc/to, $(DESTDIR)/var/cache/to, and $(DESTDIR)/var/db/to"
 
 dev:
-	VERSION=$(VERSION) cargo +nightly build --release
+	VERSION=$(VERSION) cargo build --release
 
 	sudo install -dm755                                /var/lib/to/chroot
 	sudo install -dm755                                /var/cache/to/sources
