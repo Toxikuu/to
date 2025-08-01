@@ -64,6 +64,16 @@ bit because there is so much shit to do.
 NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 
 ## TODO
+- [ ] Add `to enter <package>` to enter into a package build chroot
+  interactively
+- [ ] Add `to inspect <package>` to inspect the package contents in a read-only
+  mode, similar to `to edit`
+- [x] Add package releases (HIGH PRIORITY)
+    - [ ] Remove traces of the previous system relying on timestamps
+    - [x] Ensure support in manifests, installs, etc. (wip)
+- [ ] Conform(ish) to conventional-commits and semver
+    - [ ] Should also write a CONTRIBUTING.md explaining it and custom tags
+    - [ ] Should also bump semver accordingly
 - [ ] Add a flag `--no-dependencies` to skip resolving and installing
   dependencies for `to install`
 - [ ] Add an option to the config to disable logging to stdout
@@ -73,7 +83,7 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
     - Don't bother trying to get `i()` to work with this, and simply mention
       that post-install instructions aren't supported for `--root` installs
 - [x] Allow `mk check || true` and similar commands
-    - [ ] Test this
+    - [x] Test this (seems functional)
 - [ ] Release the stage file somewhere and download it when installing
     - [ ] Add a variable to the makefile to avoid downloading the default
     stagefile
@@ -83,10 +93,12 @@ NOT WORKING ON IT YET. PROBABLY NOT SOON. NO PROMISES.
 post-build steps system that runs before QA. This system should be similar to
 QA. Probably call it opts. Move strip into opts. Should allow for stuff like
 opts=(!strip !la)
+    - [x] Move strip into opts and remove it from config.toml
 - [x] Add --force for `to build`. Make the build not wanna build by default,
 only building if the pkgfile is newer than the distfile.
 - [x] Make cli modular
 - [ ] Fix message formatting as visible in `tzdata`
+- [x] Remove runtime dependencies entirely
 - [x] Don't install runtime dependencies to the build environment.
     - [x] There needs to be some way to check whether a package is being
     installed in the build environment. Use the existence of /D.
@@ -105,6 +117,7 @@ only building if the pkgfile is newer than the distfile.
     about `to`, including the number of installed packages, the total number of
     packages, the health (with a flag), the number of outdated packages, the
     number of commit-versioned packages.
+    - [ ] Add `--number-installed|-N`
 - [ ] Improve `to view`
     - [x] Add `--dependencies` and `--deep-dependencies`
     - [x] Add `--dependants`
@@ -159,7 +172,7 @@ only building if the pkgfile is newer than the distfile.
 - [x] Add `to --version`
 - [x] Cache the output of `to vf`. This cache should reset every 4 hours, but
   should be overrideable by a flag.
-    - [ ] Add an option to use the cache, even if it's stale
+    - [x] Add an option to use the cache, even if it's stale
 - [ ] Add to-specific data in /var/db/to/data/_/
     - [ ] Have a file containing the number of installed packages (not sure
     about this one)
@@ -176,7 +189,7 @@ only building if the pkgfile is newer than the distfile.
     - [x] Make an LFStage profile for it
     - [ ] Once `to` is relatively stable, install it to the stage file profile
     (not so sure about this one either; i kinda like destdiring it)
-- [ ] Only check health upon request; make the output more useful
+- [x] Only check health upon request; make the output more useful
 - [x] Support rebuilding the entire repo
     - This would be done by resolving the order in which all packages should be
       built and building.
