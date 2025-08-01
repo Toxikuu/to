@@ -101,8 +101,7 @@ pub enum FormError {
 ///   currently not standardized, though they may be eventually.
 /// * `sources`         - Zero or more dls, or another package. If the dl is not prefixed by a
 ///   character and a comma, explicitly indicating a source kind, the source kind is guessed.
-/// * `dependencies`    - Zero or more dependencies. These may be build-only, runtime-only, or
-///   always required.
+/// * `dependencies`    - Zero or more dependencies. These may be build-only or always required.
 /// * `kcfg`            - Zero or more kernel config options required for the correct functioning
 ///   of a package. These are formatted as `option = y/m` or `option_suboption = n`. In other words,
 ///   the `CONFIG_` prefix may be elided, and the yes-module-no tristate can be expressed by the first
@@ -170,7 +169,7 @@ impl Package {
         };
 
         let u = if u.is_empty() { None } else { Some(u.to_string()) };
-        let r = if r.is_empty() { 1u8 } else { r.parse::<u8>().expect("Supplied release is not a u8") };
+        let r = if r.is_empty() { 1u8 } else { r.parse::<u8>().unwrap_or_else(|_| panic!("Supplied release '{r}' for {n} is not a u8")) };
         let vr = format!("{v}-{r}");
 
         let vf = if vf.is_empty() { None } else { Some(vf.to_string()) };

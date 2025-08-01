@@ -104,7 +104,7 @@ impl Package {
 
         exec!(
             "
-            source {pkgfile}
+            tource {pkgfile}
             if is_function p; then
                 echo 'Executing pre-build steps for {self}'
                 p
@@ -241,13 +241,17 @@ impl Package {
         chroot {MERGED} \
             /usr/bin/env -i             \
                 MAKEFLAGS="{makeflags}" \
+                RUSTFLAGS="{rustflags}" \
                 CXXFLAGS="{cflags}"     \
+                FCFLAGS="{cflags}"      \
                 CFLAGS="{cflags}"       \
+                FFLAGS="{cflags}"       \
                 TO_TEST={tests}         \
             /runner
         "#,
             makeflags = &CONFIG.makeflags,
             cflags = &CONFIG.cflags,
+            rustflags = &CONFIG.rustflags,
             tests = CONFIG.tests,
         )
         .map_err(|_| BuildError::Build)
@@ -373,7 +377,7 @@ fn clean_overlay() -> Result<(), BuildError> {
 ///
 /// This is only used when building *every* package
 pub fn get_build_order(mut all_packages: Vec<Package>) -> Vec<Package> {
-    debug!("Resolving build order... (this may take a while)");
+    debug!("Resolving build order...");
     let mut order: Vec<Package> = Vec::new();
     let original_len = all_packages.len();
 
@@ -404,8 +408,7 @@ pub fn get_build_order(mut all_packages: Vec<Package>) -> Vec<Package> {
             let order_names = order.iter().map(|p| p.name.as_str()).collect::<Vec<_>>();
             let pkg = &all_packages[i];
 
-            // Find build and required dependencies, extracting their names. This is done to avoid
-            // cycles when runtime dependencies are treated without nuance.
+            // Find build and required dependencies, extracting their names.
             let mut dependencies = pkg.dependencies.iter().filter(|d| matches!(d.kind, DepKind::Build | DepKind::Required))
                 .map(|d| d.to_package().unwrap().name);
 
@@ -485,7 +488,6 @@ mod test {
 
         // Ensure dependency information is maintained
         assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Required));
-        assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Runtime));
         assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Build));
 
         // Ensure all dependency packages have `depkind` and confirm `is_dependency()` works

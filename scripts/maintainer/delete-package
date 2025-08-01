@@ -16,7 +16,7 @@ check_existence() {
 }
 
 check_existence
-. "$n/pkg"
+tource "$n/pkg"
 rm -rvf "${n:?}"
 
 if [ -z "$(git status -s "$n")" ]; then

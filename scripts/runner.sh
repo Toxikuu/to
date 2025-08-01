@@ -25,12 +25,8 @@ EOF
 fi
 
 
-# Source stuff
+# Source base environment and enter build directory
 source /usr/share/to/envs/base.env
-source /pkg
-
-
-# Enter the build directory
 cd "$B"
 
 
@@ -38,8 +34,11 @@ cd "$B"
 if [ -f /deps ]; then
     echo "Installing dependencies..."
     # shellcheck disable=SC2046
-    to install --suppress-messages $(</deps)
+    to install -ds $(</deps)
 fi
+
+# Source package
+tource /pkg
 
 
 # Extract zips and tarballs; copy other sources to $B

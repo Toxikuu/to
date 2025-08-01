@@ -97,7 +97,7 @@ impl Package {
             return Err(InstallError::MissingDistfile)
         }
 
-        // Only install runtime dependencies if we aren't in the build environment
+        // Only install required dependencies
         let deps = self.collect_install_deps();
         for dep in deps {
             dep.install_inner(full_force, full_force, visited, suppress, root)
@@ -115,7 +115,7 @@ impl Package {
             r#"
 
         set -euo pipefail
-        source {pkgfile:?}
+        tource {pkgfile:?}
 
         if [ "{root}" = "/" ]; then
             if is_function prei; then
@@ -175,9 +175,10 @@ impl Package {
     /// * `force`       - Whether the package should be forcibly (re)installed
     /// * `full_force`  - Whether all dependencies should be forcible (re)installed
     /// * `suppress`    - Whether to suppress messages
+    /// * `root`        - The directory to which the package should be installed (defaults to /)
     ///
     /// # Errors
-    /// TODO
+    // TODO: ^
     #[instrument(skip(self, force))]
     pub fn install(
         &self,
@@ -188,6 +189,32 @@ impl Package {
     ) -> Result<(), InstallError> {
         let mut visited = HashSet::new();
         self.install_inner(force, full_force, &mut visited, suppress, root)
+            .permit(|e| matches!(e, InstallError::AlreadyInstalled))
+    }
+
+    /// # Installs a package without its dependencies, ignoring the case where it's already
+    /// installed
+    ///
+    /// Wraps `install_inner()`
+    ///
+    /// # Arguments
+    /// * `force`       - Whether the package should be forcibly (re)installed
+    /// * `suppress`    - Whether to suppress messages
+    /// * `root`        - The directory to which the package should be installed (defaults to /)
+    ///
+    /// # Errors
+    // TODO: ^
+    pub fn install_no_deps(
+        &self,
+        force: bool,
+        suppress: bool,
+        root: Option<&str>,
+    ) -> Result<(), InstallError> {
+        let mut pkg = self.clone();
+        pkg.dependencies = vec![];
+
+        let mut visited = HashSet::new();
+        pkg.install_inner(force, false, &mut visited, suppress, root)
             .permit(|e| matches!(e, InstallError::AlreadyInstalled))
     }
 }

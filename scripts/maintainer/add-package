@@ -163,7 +163,7 @@ template() {
 finalize() {
 
     cd "/var/db/to/pkgs/${n:?}"
-    . ./pkg
+    tource ./pkg
 
     rm -f deps
 

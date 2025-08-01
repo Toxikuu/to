@@ -27,8 +27,10 @@ pub struct Config {
     pub makeflags:           String,
     /// Stagefile to use for the build environment
     pub stagefile:           String,
-    /// CFLAGS and CXXFLAGS to pass to the build environment
+    /// CFLAGS, CXXFLAGS, FFLAGS, and FCFLAGS to pass to the build environment
     pub cflags:              String,
+    /// RUSTFLAGS to pass to the build environment
+    pub rustflags:           String,
     /// Command used for `to view --tree <package>`
     pub tree_command:        String,
     /// Address of the distfileserver
@@ -46,9 +48,10 @@ impl Default for Config {
             log_to_console:      true,
             log_max_size:        64 * 1024 * 1024, // 64 MiB
             tests:               false,
-            makeflags:           format!("-j{n} -l{n}", n = num_cpus::get()),
+            makeflags:           format!("-j{}", num_cpus::get()),
             stagefile:           "/usr/share/to/stagefile.tar.xz".to_string(),
-            cflags:              "-march=x86-64-v2 -O2 -pipe".to_string(),
+            cflags:              "-march=x86-64-v3 -O2 -pipe".to_string(),
+            rustflags:           "-C opt-level=2 -C target-cpu=x86-64-v3".to_string(),
             tree_command:        "tree -F".to_string(),
             server_address:      "127.0.0.1:7020".to_string(),
             package_repo:        "https://github.com/Toxikuu/to-pkgs.git".to_string(),
