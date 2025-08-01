@@ -97,7 +97,7 @@ impl Package {
             return Err(InstallError::MissingDistfile)
         }
 
-        // Only install runtime dependencies if we aren't in the build environment
+        // Only install required dependencies
         let deps = self.collect_install_deps();
         for dep in deps {
             dep.install_inner(full_force, full_force, visited, suppress, root)

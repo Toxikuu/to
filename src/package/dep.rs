@@ -23,10 +23,7 @@ use super::{
     Package,
 };
 use crate::{
-    package::{
-        all_package_names,
-        install::in_build_environment,
-    },
+    package::all_package_names,
     utils::parse::us_array,
 };
 
@@ -45,7 +42,6 @@ pub struct Dep {
 // dependencies for the packages for which I want documentation.
 pub enum DepKind {
     Required,
-    Runtime,
     Build,
 }
 
@@ -53,7 +49,6 @@ impl fmt::Display for DepKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             | Self::Required => write!(f, "Required"),
-            | Self::Runtime => write!(f, "Runtime"),
             | Self::Build => write!(f, "Build"),
         }
     }
@@ -64,7 +59,6 @@ impl Dep {
         if let Some((kind, str)) = str.split_once(',') {
             let kind = match kind {
                 | "b" => DepKind::Build,
-                | "r" => DepKind::Runtime,
                 | _ => panic!("Unknown dep kind: {kind}"),
             };
 
@@ -259,13 +253,11 @@ impl Package {
 
     /// # Collects all dependencies that should be installed
     ///
-    /// This function accounts for whether we're installing in the build chroot or for realsies.
+    /// This function used to only install *runtime* dependencies when not in the chroot
+    /// environment. It now only installs required dependencies, regardless of context.
+    // TODO: Consider refactoring this function away
     pub fn collect_install_deps(&self) -> Vec<Package> {
-        if in_build_environment() {
-            self.resolve_deps(|k| matches!(k, DepKind::Required))
-        } else {
-            self.resolve_deps(|k| matches!(k, DepKind::Required | DepKind::Runtime))
-        }
+        self.resolve_deps(|k| matches!(k, DepKind::Required))
     }
 }
 
@@ -377,20 +369,6 @@ mod test {
         assert!(all_deps.iter().all(|d| d.name != "make-ca"))
     }
 
-    /// Elogind depends on polkit as a runtime dependency. Polkit has glib listed as a required
-    /// dependency. Confirm that glib is no longer pulled in.
-    #[test]
-    fn elogind_runtime_required() {
-        let pkg = Package::from_s_file("elogind").unwrap();
-
-        let all_deps = pkg.resolve_deps(|k| !matches!(k, DepKind::Runtime));
-        dbg!(&all_deps);
-
-        assert!(all_deps.iter().any(|d| d.name == "acl"));
-        assert!(all_deps.iter().all(|d| d.name != "polkit")); // test shallow filtering
-        assert!(all_deps.iter().all(|d| d.name != "glib")); // test deep filtering
-    }
-
     /// Vala depends on libx11 at build time. This test ensures util-macros, a required dependency
     /// of libx11, is pulled in. This test also mimics the dependency resolution in
     /// `crate::package::build`.
@@ -456,50 +434,46 @@ mod test {
         assert!(deps.iter().any(|d| d.name == "util-macros"));
     }
 
-    /// Since make-ca is both a runtime and a required dependency, some weird shit used to happen.
-    /// Test to ensure that weird shit doesn't happen.
-    ///
-    /// By weird shit, I mean the dependency resolver used to only hash dependencies by name, not
-    /// also by kind. This should be fixed now.
-    // TEST: This is currently failing because make-ca only shows up once, and as a runtime
-    // dependency. I'm unsure if this is more correct than the previous state of affairs.
-    #[test]
-    fn rust_make_ca_dep() {
-        let pkg = Package::from_s_file("rust").unwrap();
-
-        let all_deps = pkg.resolve_deps(|_| true);
-        eprintln!("Deps:");
-        for dep in &all_deps {
-            eprintln!("{:>16} ({})", dep.name, dep.depkind.unwrap())
-        }
-
-        assert!(
-            all_deps
-                .iter()
-                .filter(|d| d.name == "make-ca")
-                .collect::<Vec<_>>()
-                .len()
-                > 1
-        );
-
-        assert!(
-            all_deps
-                .iter()
-                .any(|d| d.name == "make-ca" && d.depkind.unwrap() == DepKind::Required)
-        );
-
-        assert!(
-            all_deps
-                .iter()
-                .any(|d| d.name == "make-ca" && d.depkind.unwrap() == DepKind::Runtime)
-        );
-
-        let deps = all_deps
-            .into_iter()
-            .filter(|d| d.depkind.expect("Dep should have a kind") != DepKind::Runtime)
-            .collect::<Vec<_>>();
-
-        assert!(deps.iter().any(|d| d.name == "make-ca"));
-        assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Required));
-    }
+    // TODO: Maybe just rewrite this test completely
+    //
+    // /// Since make-ca is both a runtime and a required dependency, some weird shit used to happen.
+    // /// Test to ensure that weird shit doesn't happen.
+    // ///
+    // /// By weird shit, I mean the dependency resolver used to only hash dependencies by name, not
+    // /// also by kind. This should be fixed now.
+    // // TEST: This is currently failing because make-ca only shows up once, and as a runtime
+    // // dependency. I'm unsure if this is more correct than the previous state of affairs.
+    // #[test]
+    // fn rust_make_ca_dep() {
+    //     let pkg = Package::from_s_file("rust").unwrap();
+    //
+    //     let all_deps = pkg.resolve_deps(|_| true);
+    //     eprintln!("Deps:");
+    //     for dep in &all_deps {
+    //         eprintln!("{:>16} ({})", dep.name, dep.depkind.unwrap())
+    //     }
+    //
+    //     assert!(
+    //         all_deps
+    //             .iter()
+    //             .filter(|d| d.name == "make-ca")
+    //             .collect::<Vec<_>>()
+    //             .len()
+    //             > 1
+    //     );
+    //
+    //     assert!(
+    //         all_deps
+    //             .iter()
+    //             .any(|d| d.name == "make-ca" && d.depkind.unwrap() == DepKind::Required)
+    //     );
+    //
+    //     let deps = all_deps
+    //         .into_iter()
+    //         .filter(|d| d.depkind.expect("Dep should have a kind") != DepKind::Recommended)
+    //         .collect::<Vec<_>>();
+    //
+    //     assert!(deps.iter().any(|d| d.name == "make-ca"));
+    //     assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Required));
+    // }
 }

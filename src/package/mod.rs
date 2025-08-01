@@ -101,8 +101,7 @@ pub enum FormError {
 ///   currently not standardized, though they may be eventually.
 /// * `sources`         - Zero or more dls, or another package. If the dl is not prefixed by a
 ///   character and a comma, explicitly indicating a source kind, the source kind is guessed.
-/// * `dependencies`    - Zero or more dependencies. These may be build-only, runtime-only, or
-///   always required.
+/// * `dependencies`    - Zero or more dependencies. These may be build-only or always required.
 /// * `kcfg`            - Zero or more kernel config options required for the correct functioning
 ///   of a package. These are formatted as `option = y/m` or `option_suboption = n`. In other words,
 ///   the `CONFIG_` prefix may be elided, and the yes-module-no tristate can be expressed by the first

@@ -408,8 +408,7 @@ pub fn get_build_order(mut all_packages: Vec<Package>) -> Vec<Package> {
             let order_names = order.iter().map(|p| p.name.as_str()).collect::<Vec<_>>();
             let pkg = &all_packages[i];
 
-            // Find build and required dependencies, extracting their names. This is done to avoid
-            // cycles when runtime dependencies are treated without nuance.
+            // Find build and required dependencies, extracting their names.
             let mut dependencies = pkg.dependencies.iter().filter(|d| matches!(d.kind, DepKind::Build | DepKind::Required))
                 .map(|d| d.to_package().unwrap().name);
 
@@ -489,7 +488,6 @@ mod test {
 
         // Ensure dependency information is maintained
         assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Required));
-        assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Runtime));
         assert!(deps.iter().any(|d| d.depkind.unwrap() == DepKind::Build));
 
         // Ensure all dependency packages have `depkind` and confirm `is_dependency()` works
