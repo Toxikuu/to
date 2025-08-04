@@ -236,6 +236,7 @@ impl Package {
 
     fn chroot_and_run(&self) -> Result<(), BuildError> {
         info!("Entering chroot for {self}");
+
         exec!(
             r#"
         chroot {MERGED} \
@@ -259,11 +260,8 @@ impl Package {
 
     fn save_distfile(&self) -> Result<(), BuildError> {
         mkdir_p(self.distdir()).map_err(|_| BuildError::SaveDistfile)?;
-        exec!(
-            "cp -vf '/var/lib/to/chroot/upper/pkg.tar.zst' '{}'",
-            self.distfile().display()
-        )
-        .map_err(|_| BuildError::SaveDistfile)?;
+        copy("/var/lib/to/chroot/upper/pkg.tar.zst", self.distfile())
+            .map_err(|_| BuildError::SaveDistfile)?;
 
         info!("Saved distfile for {self}");
         Ok(())
