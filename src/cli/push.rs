@@ -9,7 +9,7 @@ use std::{
 use clap::Args;
 use tracing::error;
 
-use super::CommandError;
+use color_eyre::Result as Eresult;
 use crate::{
     config::CONFIG,
     exec,
@@ -36,7 +36,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         let pkgs: Vec<Package> = imply_all!(self)
             .iter()
             .map(|p| Package::from_s_file(p))

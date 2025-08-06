@@ -1,13 +1,11 @@
-use std::process::exit;
-
 use clap::Args;
 use tracing::{
     error,
     info,
 };
 
-use super::CommandError;
 use crate::exec_interactive;
+use color_eyre::eyre::{bail, Result as Eresult};
 
 /// Edit build instructions and/or metadata for a package
 #[derive(Args, Debug)]
@@ -22,7 +20,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         for pkg in &self.packages {
             let name = pkg.split_once('@').map(|(n, _)| n).unwrap_or(pkg);
 
@@ -34,7 +32,7 @@ impl Command {
             .is_err()
             {
                 error!("Failed to edit {name}");
-                exit(1)
+                bail!("Failed to edit {name}");
             }
 
             info!("Edited {name}");

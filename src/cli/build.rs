@@ -1,4 +1,5 @@
 use clap::Args;
+use color_eyre::eyre::bail;
 use std::process::exit;
 use tracing::{
     debug,
@@ -6,12 +7,13 @@ use tracing::{
     info,
 };
 
-use super::CommandError;
 use crate::{
     package::{
         all_package_names, build::{get_build_order, BuildError}, Package
     },
 };
+
+use crate::utils::err::eyre_prelude::*;
 
 /// Build a package from source
 #[derive(Args, Debug)]
@@ -35,7 +37,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         let pkgs = if self.packages.is_empty() {
             let all_packages = all_package_names()
                 .iter()
@@ -65,18 +67,13 @@ impl Command {
                     info!(
                         "Not rebuilding {pkg:-}, pass --force or edit its pkgfile to force a rebuild."
                     );
-                    // println!(
-                    //     "Not rebuilding {pkg:-}, pass --force or edit its pkgfile to force a rebuild."
-                    // );
                 },
                 | Err(e) => {
                     error!("Failed to build {pkg:-}: {e}");
-                    // eprintln!("Failed to build {pkg:-}: {e}");
-                    return Err(CommandError::from(e))
+                    bail!("Failed to build {pkg:-}");
                 },
                 | Ok(_) => {
                     info!("Built {pkg:-}");
-                    // println!("Built {pkg:-}");
                 },
             }
         }

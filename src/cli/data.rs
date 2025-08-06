@@ -2,7 +2,7 @@ use std::process::exit;
 
 use clap::Args;
 
-use super::CommandError;
+use color_eyre::eyre::{Result as Eresult};
 use crate::package::Package;
 
 /// Return unformatted, script-friendly data about a package
@@ -38,7 +38,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         let pkg = Package::from_s_file(&self.package)?;
 
         if self.version {

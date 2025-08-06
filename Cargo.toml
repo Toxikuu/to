@@ -14,9 +14,9 @@ overflow-checks = true
 # lto = "thin"
 
 [dependencies]
-anyhow = "1"
 axum = { version = "0.8", features = ["multipart"] }
 clap = { version = "4.5", features = ["derive"] }
+color-eyre = "0.6.5"
 dircpy = "0.3"
 filetime = "0.2.25"
 fshelpers = { git = "https://github.com/toxikuu/fshelpers.git" }

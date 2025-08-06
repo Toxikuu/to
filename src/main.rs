@@ -3,11 +3,10 @@
 #![feature(duration_constructors_lite)]
 #![feature(path_add_extension)]
 
-use std::process::exit;
-
 use clap::Parser;
 use config::CONFIG;
-use tracing::error;
+
+use color_eyre::{eyre::Context, Result};
 
 mod cli;
 mod config;
@@ -16,11 +15,8 @@ mod server;
 mod utils;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     utils::log::init();
-    if let Err(e) = cli::Cli::parse().run().await {
-        error!("{e}");
-        unravel!(e);
-        exit(1)
-    }
+    color_eyre::install().wrap_err("Failed to initialize error reporter")?;
+    cli::Cli::parse().run().await.wrap_err("Something went wrong D:")
 }

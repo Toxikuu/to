@@ -1,6 +1,6 @@
 use clap::Args;
+use color_eyre::Result as Eresult;
 
-use super::CommandError;
 use crate::{
     imply_all,
     package::Package,
@@ -15,7 +15,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         let pkgs = imply_all!(self);
 
         for pkg in &pkgs {

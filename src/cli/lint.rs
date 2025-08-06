@@ -4,7 +4,7 @@ use tracing::{
     warn,
 };
 
-use super::CommandError;
+use color_eyre::{Result as Eresult};
 use crate::{
     imply_all,
     package::Package,
@@ -19,7 +19,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         let pkgs: Vec<Package> = imply_all!(self)
             .iter()
             .map(|p| Package::from_s_file(p))

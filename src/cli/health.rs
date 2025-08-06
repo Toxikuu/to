@@ -1,6 +1,5 @@
-use std::process::exit;
 use clap::Args;
-use super::CommandError;
+use color_eyre::{eyre::bail, Result as Eresult};
 use crate::utils::health::check_health;
 
 // TODO: Consider supporting per-package health-checks (probably out of scope)
@@ -10,9 +9,9 @@ use crate::utils::health::check_health;
 pub struct Command {}
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         if check_health() > 0 {
-            exit(1)
+            bail!("Unhealthy")
         }
 
         Ok(())

@@ -3,6 +3,7 @@ use tracing::info;
 
 use super::CommandError;
 use crate::exec_interactive;
+use color_eyre::eyre::{Report as Ereport, Result as Eresult, WrapErr};
 
 /// Create an alias for a package
 #[derive(Args, Debug)]
@@ -13,7 +14,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         let from = self.packages.first().ok_or(CommandError::InvalidSyntax)?;
         let from = from.split_once('@').map_or(from.as_str(), |(n, _)| n);
 

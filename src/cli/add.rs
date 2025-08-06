@@ -1,12 +1,10 @@
-use std::process::exit;
-
 use clap::Args;
 use tracing::{
     error,
     info,
 };
 
-use super::CommandError;
+use color_eyre::eyre::{Result as Eresult, bail};
 use crate::exec_interactive;
 
 /// Add a package to the package repository
@@ -30,7 +28,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         for template in &self.templates {
             if exec_interactive!(
                 "FINALIZE_ONLY={} SKIP_BUILD={} {}/add-package {template}",
@@ -41,7 +39,7 @@ impl Command {
             .is_err()
             {
                 error!("Failed to add package from {template}");
-                exit(1)
+                bail!("Failed to add package from {template}");
             };
 
             info!("Added package from {template}");

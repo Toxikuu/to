@@ -37,40 +37,24 @@ use crate::{
     }, utils::file::mtime, CONFIG
 };
 
+use color_eyre::{eyre::{Report as Ereport, Result as Eresult, WrapErr}, Section};
+
 const MERGED: &str = "/var/lib/to/chroot/merged";
 
 #[rustfmt::skip]
 #[derive(Debug, Error)]
 pub enum BuildError {
-    #[error("Failed to clean overlay")]
-    CleanOverlay,
-
-    #[error("Failed to setup overlay")]
-    SetupOverlay,
-
     #[error("Failed to fetch sources")]
     FetchSources(#[from] SourceError),
-
-    #[error("Failed to populate overlay")]
-    PopulateOverlay,
-
-    #[error("Failed to execute pre-build hook")]
-    PreBuildHook,
-
-    #[error("Failed to build")]
-    Build,
 
     #[error("Failed to resolve dependencies")]
     ResolveDeps(#[from] FormError),
 
-    #[error("Failed to cache")]
-    Cache,
-
-    #[error("Failed to save distfile")]
-    SaveDistfile,
-
     #[error("Shouldn't build")]
     ShouldntBuild,
+
+    #[error("Other error")]
+    Other(#[from] Ereport),
 }
 
 impl Package {
@@ -85,9 +69,9 @@ impl Package {
         self.fetch_sources()?;
         self.populate_overlay()?;
         self.pre_build_hook()?;
-        self.chroot_and_run()?;
+        self.chroot_and_run().wrap_err("Failed to build package")?;
         self.cache_stuff()?;
-        self.save_distfile()?;
+        self.save_distfile().wrap_err("Failed to save distfile")?;
 
         Ok(())
     }
@@ -98,7 +82,7 @@ impl Package {
         pm > dm
     }
 
-    fn pre_build_hook(&self) -> Result<(), BuildError> {
+    fn pre_build_hook(&self) -> Eresult<()> {
         debug!("Checking for pre-build steps for {self}...");
         let pkgfile = &self.pkgfile();
 
@@ -112,7 +96,7 @@ impl Package {
             ",
             pkgfile = pkgfile.display(),
         )
-        .map_err(|_| BuildError::PreBuildHook)
+            .wrap_err("Failed to execute pre-build hook")
     }
 
     // NOTE: Dependencies should be installed after the chroot is entered
@@ -122,7 +106,7 @@ impl Package {
         // TODO: Consider dropping `/etc/to/exclude` support
         // - Not sure if I wanna do this because I already wrote and used `il()` :shrug:
         for path in ["B", "D", "S", "etc/to"] {
-            mkdir_p(Path::new(MERGED).join(path)).map_err(|_| BuildError::PopulateOverlay)?
+            mkdir_p(Path::new(MERGED).join(path)).wrap_err("Failed to create base directories in the build chroot")?
         }
 
         exec!(
@@ -143,22 +127,22 @@ impl Package {
             self.pkgdir().display(),
             self.pkgdir().display(),
         )
-        .map_err(|_| BuildError::PopulateOverlay)?;
+            .wrap_err("Failed to populate the build chroot")?;
 
         if !self.dependencies.is_empty() {
             debug!("Copying dependencies to overlay")
         }
 
-        fn copy_to_chroot(path: PathBuf) -> Result<(), BuildError> {
+        fn copy_to_chroot(path: PathBuf) -> Eresult<()> {
             let dest = Path::new(MERGED).join(
-                path.strip_prefix("/")
-                    .map_err(|_| BuildError::PopulateOverlay)?,
+                path.strip_prefix("/").expect("Path should start with /")
             );
-            mkf_p(&dest).map_err(|_| BuildError::PopulateOverlay)?;
-            copy(&path, dest).map(drop).map_err(|_| {
-                error!("Failed to copy {} to chroot", path.display());
-                BuildError::PopulateOverlay
-            })
+
+            mkf_p(&dest)
+                .wrap_err_with(|| format!("Failed to create destination path: {}", dest.display()))?;
+
+            copy(&path, dest).map(drop)
+                .wrap_err_with(|| format!("Failed to copy {} to chroot", path.display()))
         }
 
         for source in &self.sources {
@@ -168,9 +152,10 @@ impl Package {
 
             if source_path.is_dir() {
                 dircpy::copy_dir(&source_path, &source_dest)
-                    .map_err(|_| BuildError::PopulateOverlay)?;
+                    .wrap_err_with(|| format!("Failed to copy directory {} to {}", source_path.display(), source_dest.display()))?;
             } else {
-                copy(&source_path, &source_dest).map_err(|_| BuildError::PopulateOverlay)?;
+                copy(&source_path, &source_dest)
+                    .wrap_err_with(|| format!("Failed to copy file {} to {}", source_path.display(), source_dest.display()))?;
             }
         }
 
@@ -180,8 +165,7 @@ impl Package {
         for dep in &deps {
             let files = [dep.distfile(), dep.pkgfile(), dep.sfile()];
             for file in files {
-                copy_to_chroot(file)
-                    .map_err(|_| BuildError::PopulateOverlay)?;
+                copy_to_chroot(file)?
             }
 
             debug_assert!(gather_all_aliases().len() > 10);
@@ -205,8 +189,10 @@ impl Package {
                 let symlink = Path::new(MERGED).join(alias_path.strip_prefix("/").expect("Alias path should be absolute"));
                 debug!("Symlinking '{}' -> '{}'", symlink.display(), &dep.name);
 
-                fs::symlink(&dep.name, &symlink).map_err(|_| BuildError::PopulateOverlay)
-                    .permit_if(alias_path.read_link().map(|p| p.to_string_lossy() == dep.name).unwrap_or(false))?;
+                fs::symlink(&dep.name, &symlink)
+                    .permit_if(alias_path.read_link().map(|p| p.to_string_lossy() == dep.name).unwrap_or(false))
+                    .wrap_err_with(|| format!("Failed to symlink {} to its alias at {}", &dep.name, &symlink.display()))?;
+
                 debug_assert_eq!(symlink, Path::new(MERGED).join("var/db/to/pkgs").join(alias_path.file_name().unwrap()));
                 debug_assert_eq!(symlink.read_link().unwrap(), PathBuf::from(&dep.name));
             }
@@ -226,7 +212,7 @@ impl Package {
             debug!("Not writing deps file since {self:-} has no dependencies");
         } else {
             let deps_file = format!("{MERGED}/deps");
-            write(deps_file, deps_str).map_err(|_| BuildError::PopulateOverlay)?; // deps file
+            write(deps_file, deps_str).wrap_err("Failed to write deps file")?; // deps file
             debug!("Wrote deps file for {self}");
             trace!("Deps_str: {deps_str}");
         }
@@ -234,7 +220,7 @@ impl Package {
         Ok(())
     }
 
-    fn chroot_and_run(&self) -> Result<(), BuildError> {
+    fn chroot_and_run(&self) -> Eresult<()> {
         info!("Entering chroot for {self}");
 
         exec!(
@@ -255,13 +241,13 @@ impl Package {
             rustflags = &CONFIG.rustflags,
             tests = CONFIG.tests,
         )
-        .map_err(|_| BuildError::Build)
+            .wrap_err("Something went wrong in the build chroot")
     }
 
-    fn save_distfile(&self) -> Result<(), BuildError> {
-        mkdir_p(self.distdir()).map_err(|_| BuildError::SaveDistfile)?;
+    fn save_distfile(&self) -> Eresult<()> {
+        mkdir_p(self.distdir()).wrap_err("Failed to create distdir")?;
         copy("/var/lib/to/chroot/upper/pkg.tar.zst", self.distfile())
-            .map_err(|_| BuildError::SaveDistfile)?;
+            .wrap_err("Failed to copy distfile")?;
 
         info!("Saved distfile for {self}");
         Ok(())
@@ -276,8 +262,8 @@ impl Package {
         if self.dependencies.iter().any(|d| d.name == "make-ca") {
             debug!("Caching make-ca certificates if needed");
 
-            mkdir_p(Path::new(LOWER).join("etc/ssl")).map_err(|_| BuildError::Cache)?;
-            mkdir_p(Path::new(LOWER).join("etc/pki")).map_err(|_| BuildError::Cache)?;
+            mkdir_p(Path::new(LOWER).join("etc/ssl")).wrap_err("Failed to create direrctory")?;
+            mkdir_p(Path::new(LOWER).join("etc/pki")).wrap_err("Failed to create direrctory")?;
             exec!(
                 "
                 if [ -d {UPPER}/etc/ssl/certs ]; then
@@ -289,16 +275,7 @@ impl Package {
                 fi
                 "
             )
-            .map_err(|_| BuildError::Cache)?;
-
-            exec!(
-                "
-                if [ -d {UPPER}/etc/pki ]; then
-                    cp -af --no-preserve=xattr {UPPER}/etc/pki {LOWER}/etc
-                fi
-                "
-            )
-            .map_err(|_| BuildError::Cache)?;
+                .wrap_err("Failed to cache ca certificates")?;
         }
 
         // Cache rustup toolchains to avoid redownloading them
@@ -318,14 +295,15 @@ impl Package {
                 fi
                 "
             )
-            .map_err(|_| BuildError::Cache)?;
+                .wrap_err("Failed to cache rustup toolchains")?;
         }
 
         Ok(())
     }
 }
 
-fn setup_overlay() -> Result<(), BuildError> {
+fn setup_overlay() -> Eresult<()> {
+    let stagefile = &CONFIG.stagefile;
     exec!(
         r#"
         cd        /var/lib/to/chroot
@@ -342,14 +320,28 @@ fn setup_overlay() -> Result<(), BuildError> {
         mount -vt sysfs sysfs merged/sys
         mount -vt tmpfs tmpfs merged/run
         "#,
-        stagefile = CONFIG.stagefile,
     )
-    .map_err(|_| BuildError::SetupOverlay)
+        .wrap_err("Failed to mount overlay")
+        .with_note(||
+            if Path::new(stagefile).exists() {
+                "This might be caused by missing OverlayFS support in your kernel"
+            } else {
+                "This is probably caused by your stagefile not existing"
+            }
+        )
+        .with_suggestion(||
+            if Path::new(stagefile).exists() {
+                "Ensure your kernel supports CONFIG_OVERLAY_FS"
+            } else {
+                "You can obtain the necessary stagefile"
+            }
+        )
+        // TODO: Figure out a less shit way to give suggestions and notes here
 }
 
 fn clean_overlay() -> Result<(), BuildError> {
     let chroot = Path::new("/var/lib/to/chroot");
-    mkdir_p(chroot).map_err(|_| BuildError::SetupOverlay)?;
+    mkdir_p(chroot).wrap_err("Failed to create chroot directory")?;
 
     exec!(
         r#"
@@ -359,13 +351,13 @@ fn clean_overlay() -> Result<(), BuildError> {
         "#,
         chroot = chroot.display(),
     )
-    .map_err(|_| BuildError::CleanOverlay)?;
+        .wrap_err("Failed to unmount the merged directory of the overlay")?;
 
-    rmdir_r(chroot.join("upper")).map_err(|_| BuildError::CleanOverlay)?;
-    rmdir_r(chroot.join("work")).map_err(|_| BuildError::CleanOverlay)?;
+    rmdir_r(chroot.join("upper")).wrap_err("Failed to remove the upper directory of the overlay")?;
+    rmdir_r(chroot.join("work")).wrap_err("Failed to remove the work directory of the overlay")?;
 
     for dir in ["lower", "merged", "upper", "work"] {
-        mkdir_p(chroot.join(dir)).map_err(|_| BuildError::SetupOverlay)?;
+        mkdir_p(chroot.join(dir)).wrap_err("Failed to recreate the overlay directories")?;
     }
 
     Ok(())

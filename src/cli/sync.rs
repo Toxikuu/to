@@ -1,9 +1,8 @@
-use std::process::exit;
-
 use clap::Args;
 use tracing::error;
 
 use super::CommandError;
+use color_eyre::{eyre::bail, Result as Eresult};
 use crate::{
     config::CONFIG,
     exec,
@@ -18,9 +17,9 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         if !exists("git") {
-            return Err(CommandError::MissingDependency("git".to_string()))
+            bail!(CommandError::MissingDependency("git".to_string()))
         }
 
         if exec!(
@@ -44,7 +43,7 @@ impl Command {
         .is_err()
         {
             error!("Failed to sync local package database");
-            exit(1)
+            bail!("Failed to sync local package database");
         }
 
         Ok(())

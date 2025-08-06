@@ -1,6 +1,6 @@
 use clap::Args;
 
-use super::CommandError;
+use color_eyre::Result as Eresult;
 use crate::{
     CONFIG,
     server,
@@ -17,7 +17,7 @@ pub struct Command {
 
 /// Run a distfile server
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         let full_addr = self.addr.as_ref().unwrap_or(&CONFIG.server_address);
         Ok(server::core::serve(full_addr).await?)
     }

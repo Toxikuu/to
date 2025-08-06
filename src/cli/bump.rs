@@ -1,11 +1,12 @@
 use clap::Args;
 use tracing::info;
 
-use super::CommandError;
 use crate::{
     exec_interactive,
     package::Package,
 };
+
+use color_eyre::eyre::{Result as Eresult};
 
 /// Bump a package's version
 #[derive(Args, Debug)]
@@ -26,7 +27,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         for pkg in &self.packages {
             let (name, oldv, newv) = if let Some((name, newv)) = pkg.split_once('@') {
                 let pkg = Package::from_s_file(name)?;

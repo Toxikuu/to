@@ -1,9 +1,7 @@
-use std::process::exit;
-
 use clap::Args;
 use tracing::error;
 
-use super::CommandError;
+use color_eyre::{eyre::bail, Result as Eresult};
 use crate::{
     config::CONFIG,
     imply_all,
@@ -57,7 +55,7 @@ pub struct Command {
 }
 
 impl Command {
-    pub async fn run(&self) -> Result<(), CommandError> {
+    pub async fn run(&self) -> Eresult<()> {
         let pkgs: Vec<Package> = imply_all!(self)
             .iter()
             .map(|p| Package::from_s_file(p))
@@ -74,8 +72,8 @@ impl Command {
                 let tree_command = self.tree_command.as_ref().unwrap_or(&CONFIG.tree_command);
                 println!("File tree for {pkg:-}:");
                 if let Err(e) = pkg.view_filetree(tree_command) {
-                    error!("Failed to view file tree for {pkg:-}: {e}");
-                    exit(1);
+                    error!("Failed to view file tree for {pkg:-}");
+                    bail!("Failed to view file tree for {pkg:-}");
                 };
                 continue
             }
