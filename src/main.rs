@@ -18,5 +18,5 @@ mod utils;
 async fn main() -> Result<()> {
     utils::log::init();
     color_eyre::install().wrap_err("Failed to initialize error reporter")?;
-    cli::Cli::parse().run().await.wrap_err("Something went wrong D:")
+    cli::Cli::parse().run().await
 }
