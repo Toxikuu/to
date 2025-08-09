@@ -5,6 +5,9 @@
 **Relatively simple, rock-solid (EVENTUALLY CURRENTLY WIP AND NOT SOLID AT ALL DO
 NOT USE HERE BE DRAGONS) package manager for LFS**
 
+> [!Important]
+> - This project is very **not stable**.
+
 ## Features
 - Containerized builds via OverlayFS and stage files
 - Surprisingly half-decent dependency resolution
