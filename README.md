@@ -174,7 +174,7 @@ only building if the pkgfile is newer than the distfile.
 - [ ] Add `to search`
 - [x] Add `to --version`
 - [x] Cache the output of `to vf`. This cache should reset every 4 hours, but
-  should be overrideable by a flag.
+  should be overridable by a flag.
     - [x] Add an option to use the cache, even if it's stale
 - [ ] Add to-specific data in /var/db/to/data/_/
     - [ ] Have a file containing the number of installed packages (not sure

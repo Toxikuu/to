@@ -207,7 +207,7 @@ where
         },
     };
 
-    // NOTE: `resp.content_lenght()` fails for head().
+    // NOTE: `resp.content_length()` fails for head().
     let content_length = resp.content_length().unwrap_or(0);
     debug_assert!(content_length > 0);
 

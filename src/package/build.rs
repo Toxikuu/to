@@ -265,8 +265,8 @@ impl Package {
         if self.dependencies.iter().any(|d| d.name == "make-ca") {
             debug!("Caching make-ca certificates if needed");
 
-            mkdir_p(Path::new(LOWER).join("etc/ssl")).wrap_err("Failed to create direrctory")?;
-            mkdir_p(Path::new(LOWER).join("etc/pki")).wrap_err("Failed to create direrctory")?;
+            mkdir_p(Path::new(LOWER).join("etc/ssl")).wrap_err("Failed to create directory")?;
+            mkdir_p(Path::new(LOWER).join("etc/pki")).wrap_err("Failed to create directory")?;
             exec!(
                 "
                 if [ -d {UPPER}/etc/ssl/certs ]; then
