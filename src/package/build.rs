@@ -133,7 +133,7 @@ impl Package {
             debug!("Copying dependencies to overlay")
         }
 
-        fn copy_to_chroot(path: PathBuf) -> Eresult<()> {
+        fn copy_to_chroot(path: &Path) -> Eresult<()> {
             let dest = Path::new(MERGED).join(
                 path.strip_prefix("/").expect("Path should start with /")
             );
@@ -141,7 +141,7 @@ impl Package {
             mkf_p(&dest)
                 .wrap_err_with(|| format!("Failed to create destination path: {}", dest.display()))?;
 
-            copy(&path, dest).map(drop)
+            copy(path, dest).map(drop)
                 .wrap_err_with(|| format!("Failed to copy {} to chroot", path.display()))
         }
 
@@ -159,20 +159,22 @@ impl Package {
             }
         }
 
-        let deps = self.collect_chroot_deps()?;
+        let deps = self.collect_chroot_deps().wrap_err("Failed to resolve dependencies")?;
 
         #[rustfmt::skip]
         for dep in &deps {
+            trace!("Populating chroot for dependency '{dep}'");
             let files = [dep.distfile(), dep.pkgfile(), dep.sfile()];
             for file in files {
-                copy_to_chroot(file)?
+                copy_to_chroot(&file).wrap_err_with(|| format!("Failed to copy file '{}' to chroot", file.display()))?;
+                // trace!("Copied file '{}' to chroot", file.display());
             }
 
             debug_assert!(gather_all_aliases().len() > 10);
 
             // Replicate alias structure in chroot
             let alias_paths = dep.alias_pkgdirs();
-            trace!("Aliases for {dep:-}: {alias_paths:#?}");
+            // trace!("Aliases for {dep:-}: {alias_paths:#?}");
 
             #[cfg(debug_assertions)]
             if &dep.name == "ogg" {
@@ -201,6 +203,7 @@ impl Package {
         }
 
         // Write chroot/deps
+        trace!("Concatinating dependencies");
         let deps_str = deps
             .iter()
             .map(|p| p.name.clone())

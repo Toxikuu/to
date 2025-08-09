@@ -38,7 +38,7 @@ if [ -f /deps ]; then
 fi
 
 # Source package
-tource /pkg
+tource /pkg || die "Failed to tource /pkg"
 
 
 # Extract zips and tarballs; copy other sources to $B
