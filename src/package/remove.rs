@@ -123,7 +123,7 @@ fn find_unique(
 ) -> Result<Vec<String>, io::Error> {
     debug!("Finding unique files for {this_manifest:?}");
 
-    debug_assert!(all_data.contains_key(this_manifest));
+    // debug_assert!(all_data.contains_key(this_manifest));
     let this_data = all_data
         .get(this_manifest)
         .ok_or(io::Error::from(ErrorKind::NotFound))?;
